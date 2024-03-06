@@ -75,21 +75,22 @@ char *strchr(const char *str, int character){
 }
 
 char* strsep(char** stringp, const char* delim){
-    char *str;
+    char *str, *res, *s;
     int c;
-    if (*stringp == NULL)
+    if ((s = *stringp) == NULL)
         return NULL;
-    do {
-	c = *delim++;
-        str = strchr(*stringp, c);
-        if (str != NULL) {
-	    if (c == 0) 
-	        *stringp = NULL;
+    for (res = s;;) {
+        c = *s;
+	str = strchr(delim, c);
+	if (str != NULL) {
+	    if (c == 0)
+	        s = NULL;
 	    else 
-	        *str = 0;
-	    return ++str;
+		s[-1] = 0;
+	    *stringp = s;
+	    return res;
 	}
-    } while (c != 0); 
+    }
 }
 
 
