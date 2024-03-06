@@ -86,10 +86,10 @@ char* strsep(char** stringp, const char* delim){
     for (res = s;;) {
         c = *s++;
 	str = strchr(delim, c);
-	if (str != NULL) {
+	if (str != NULL || c == 0) {
 	    if (c == 0)
-	        s = NULL;
-	    else 
+		s = NULL;
+	    else
 		s[-1] = 0;
 	    *stringp = s;
 	    return res;
