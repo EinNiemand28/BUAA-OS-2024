@@ -23,12 +23,12 @@ EXPORT(_start_mips)
 	la      a0, str
 	/* use 'addiu  sp, sp, <x>' to push a proper-sized frame onto the stack for Nonleaf function 'print_str'. */
 	/* Your code here. (2/6) */
-	addiu	sp, sp, 4
+	addiu	sp, sp, 8
 
 	jal     print_str
 	/* use 'addiu  sp, sp, <x>' to restore stack pointer. */
 	/* Your code here. (3/6) */
-	addiu	sp, sp, -4
+	addiu	sp, sp, -8
 
 	/* Set the first four parameters. */
 	li      a0, 0
