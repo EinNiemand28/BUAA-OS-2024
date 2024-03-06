@@ -48,7 +48,9 @@ int strncmp(const char *s1, const char *s2, size_t n) {
 
 char *strcat(char *dst, const char *src) {
     char *res = dst;
-    while (*dst++);
+    while (*dst) {
+	dst++;
+    }
     while ((*dst++ = *src++));
     return res;
 }
@@ -56,7 +58,9 @@ char *strcat(char *dst, const char *src) {
 char *strncat(char *dst, const char *src, size_t n){
     size_t len = 0;
     char *res = dst;
-    while (*dst++);
+    while (*dst) {
+	dst++;
+    }
     while (len < n && (*dst++ = *src++)) {
          len++;
     }
@@ -80,7 +84,7 @@ char* strsep(char** stringp, const char* delim){
     if ((s = *stringp) == NULL)
         return NULL;
     for (res = s;;) {
-        c = *s;
+        c = *s++;
 	str = strchr(delim, c);
 	if (str != NULL) {
 	    if (c == 0)
