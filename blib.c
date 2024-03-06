@@ -2,8 +2,7 @@
 
 size_t strlen(const char *s) {
     size_t len = 0;
-    while (*s) {
-        *s++;
+    while (*s++) {
 	len++;
     }
     return len;
@@ -58,8 +57,10 @@ char *strncat(char *dst, const char *src, size_t n){
     size_t len = 0;
     char *res = dst;
     while (*dst++);
-    while (len < n && (*dst++ = *src++)) len++;
-    return *res;
+    while (len < n && (*dst++ = *src++)) {
+         len++;
+    }
+    return res;
 }
 
 char *strchr(const char *str, int character){
