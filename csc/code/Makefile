@@ -1,4 +1,5 @@
-all:
-	gcc -c fibo.c
-	gcc -o fibo.o
+
+all: 
+	gcc -c fibo.c -I ../include
+	gcc -c main.c -I ../include
 
