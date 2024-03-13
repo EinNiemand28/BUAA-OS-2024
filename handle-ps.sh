@@ -40,7 +40,13 @@ elif [ ! -z "$CMD" ]; then
     grep $CMD $FILE
 elif [ ! -z $PID ]; then
     # Your code here. (3/3)
-    :
+    fa=awk '$2==PID' ps.out | awk '{print $3}'
+    while [ fa -ge 0 ]
+    do
+	    PID=fa
+	    echo fa
+	    fa=awk '$2==PID' FILE | awk '{print $3}'
+    done
 else
     usage
     exit 1
