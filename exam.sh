@@ -14,13 +14,8 @@ do
 	i=$[$i+1]
 done
 
-j=0
-while [ $j -le 15 ]
-do
-	gcc -o test/code/$i.o hello
-	j=$[$j+1]
-done
+gcc -o test/hello test/code/*.o
 
-./test/hello 2> /test/err.txt
+./test/hello 2> test/err.txt
 
 mv test/err.txt err.txt
