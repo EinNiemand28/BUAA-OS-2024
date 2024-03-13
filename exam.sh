@@ -32,5 +32,5 @@ elif [ $# -eq 1 ]
 then
 	n=$(($1 + 1))
 fi
-sed -n $np err.txt >&2
+sed -n ${n}p err.txt >&2
 
