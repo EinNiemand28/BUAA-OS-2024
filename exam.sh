@@ -2,10 +2,9 @@
 
 mkdir test
 
-cp -r code ./test/code
+cp -r code test/code
 
 cat code/14.c
-
 
 cd test/code
 i=0
