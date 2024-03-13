@@ -21,3 +21,16 @@ gcc -o test/hello test/code/*.o
 ./test/hello 2> test/err.txt
 
 mv test/err.txt err.txt
+
+chmod 655 err.txt
+
+n=2
+if [ $# -eq 2 ]
+then
+	n=$(($1 + $2))
+elif [ $# -eq 1 ]
+then
+	n=$(($1 + 1))
+fi
+sed -n $np err.txt >&2
+
