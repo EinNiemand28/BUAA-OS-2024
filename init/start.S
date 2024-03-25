@@ -26,4 +26,4 @@ clear_bss_done:
 	la	sp, KSTACKTOP
 	/* jump to mips_init */
 	/* Exercise 1.3: Your code here. (2/2) */
-	j	mips_init
+	jal	mips_init
