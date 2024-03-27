@@ -62,11 +62,18 @@ int vscanfmt(scan_callback_t in, void *data, const char *fmt, va_list ap) {
 				*ip = num;
 				break;
 			case 'c':
+				while (ch == ' ' || ch == '\t' || ch == '\n') {
+					in(data, &ch, 1);
+				}
 				ip = va_arg(ap, int *);
 				*ip = (int) ch;
 				in(data, &ch, 1);
 				break;
 			case 's':
+				while (ch == ' ' || ch == '\t' || ch == '\n') {
+					in(data, &ch, 1);
+				}
+
 				base = 0;
 				cp = (char *)va_arg(ap, char *);
 				do {
