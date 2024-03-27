@@ -64,6 +64,7 @@ int vscanfmt(scan_callback_t in, void *data, const char *fmt, va_list ap) {
 			case 'c':
 				ip = va_arg(ap, int *);
 				*ip = (int) ch;
+				in(data, &ch, 1);
 				break;
 			case 's':
 				base = 0;
