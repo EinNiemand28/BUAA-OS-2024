@@ -5,6 +5,83 @@ static void print_char(fmt_callback_t, void *, char, int, int);
 static void print_str(fmt_callback_t, void *, const char *, int, int);
 static void print_num(fmt_callback_t, void *, unsigned long, int, int, int, int, char, int);
 
+int vscanfmt(scan_callback_t in, void *data, const char *fmt, va_list ap) {
+	int *ip;
+	char *cp;
+	char ch;
+	int base, num, neg, ret = 0;
+
+	while (*fmt) {
+		if (*fmt == '%') {
+			ret++;
+			fmt++; // 跳过 '%'
+			do {
+				in(data, &ch, 1);
+			} while (ch == ' ' || ch == '\t' || ch == '\n'); // 跳过空白符
+			// 注意，此时 ch 为第一个有效输入字符
+			switch (*fmt) {
+			case 'd': // 十进制
+				if (ch == '-') {
+					neg = 1;
+					in(data, &ch, 1);
+				} else {
+					neg = 0;
+				}
+				num = 0;
+				while (ch >= '0' && ch <= '9') {
+					num = num * 10 + ch - '0';
+					in(data, &ch, 1);
+				}
+				if (neg == 1) {
+					num = -num;
+				}
+				ip = va_arg(ap, int *);
+				*ip = num;
+				break;
+			case 'x':
+				if (ch == '-') {
+					neg = 1;
+					in(data, &ch, 1);
+				} else {
+					neg = 0;
+				}
+				num = 0;
+				while ((ch >= '0' && ch <= '9') || (ch >= 'a' && ch <= 'f')) {
+					num = num * 16;
+					if (ch >= '0' && ch <= '9') {
+						num = num + ch - '0';
+					} else {
+						num = num + ch - 'a' + 10;
+					}
+					in(data, &ch, 1);
+				}
+				if (neg == 1) {
+					num = -num;
+				}
+				ip = va_arg(ap, int *);
+				*ip = num;
+				break;
+			case 'c':
+				ip = va_arg(ap, int *);
+				*ip = (int) ch;
+				break;
+			case 's':
+				base = 0;
+				cp = (char *)va_arg(ap, char *);
+				do {
+					*(cp + base) = ch;
+					base++;
+					in(data, &ch, 1);
+				} while (ch != ' ' && ch != '\t' && ch != '\n');
+				*(cp + base) = '\0';
+				break;
+			}
+			fmt++;
+		}
+	}
+	return ret;
+}
+
 void vprintfmt(fmt_callback_t out, void *data, const char *fmt, va_list ap) {
 	char c;
 	const char *s;

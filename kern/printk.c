@@ -10,12 +10,31 @@ void outputk(void *data, const char *buf, size_t len) {
 }
 /* End of Key Code "outputk" */
 
+void inputk(void *data, char *buf, size_t len) {
+	for (int i = 0; i < len; i++) {
+		while ((buf[i] = scancharc()) == '\0') {
+		}
+		if (buf[i] == '\r') {
+			buf[i] = '\n';
+		}
+	}
+}
+
 /* Lab 1 Key Code "printk" */
 void printk(const char *fmt, ...) {
 	va_list ap;
 	va_start(ap, fmt);
 	vprintfmt(outputk, NULL, fmt, ap);
 	va_end(ap);
+}
+
+int scanf(const char *fmt, ...) {
+	int cnt = 0;
+	va_list ap;
+	va_start(ap, fmt);
+	cnt = vscanfmt(inputk, NULL, fmt, ap);
+	va_end(ap);
+	return cnt;
 }
 /* End of Key Code "printk" */
 
