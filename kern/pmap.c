@@ -96,19 +96,20 @@ void page_init(void) {
 	LIST_INIT((&page_free_list));
 	/* Step 2: Align `freemem` up to multiple of PAGE_SIZE. */
 	/* Exercise 2.3: Your code here. (2/4) */
-	freemem = ROUND(freemem, sizeof(struct Page));
+	freemem = ROUND(freemem, PAGE_SIZE);
 	/* Step 3: Mark all memory below `freemem` as used (set `pp_ref` to 1) */
 	/* Exercise 2.3: Your code here. (3/4) */
-	int size = PADDR(freemem) / (sizeof(struct Page));
+	int used = PADDR(freemem) / PAGE_SIZE;
 	int i;
-	for (i = 0; i < size; i++) {
+	for (i = 0; i < used; i++) {
 		pages[i].pp_ref = 1;
 	}
+	//printk("for struct Pages: %d\n", used);
 	/* Step 4: Mark the other memory as free. */
 	/* Exercise 2.3: Your code here. (4/4) */
 	for (; i < npage; i++) {
 		pages[i].pp_ref = 0;
-		LIST_INSERT_HEAD((&page_free_list), pages[i].pp_link, Page_list);
+		LIST_INSERT_HEAD(&page_free_list, pages + i, pp_link);
 	}
 }
 
@@ -129,13 +130,15 @@ int page_alloc(struct Page **new) {
 	/* Step 1: Get a page from free memory. If fails, return the error code.*/
 	struct Page *pp;
 	/* Exercise 2.4: Your code here. (1/2) */
-	Page_list pp_link = pp->pp_link;
+	if (LIST_EMPTY(&page_free_list)) {
+		return -E_NO_MEM;
+	}
+	pp = LIST_FIRST(&page_free_list);
 	LIST_REMOVE(pp, pp_link);
-
 	/* Step 2: Initialize this page with zero.
 	 * Hint: use `memset`. */
 	/* Exercise 2.4: Your code here. (2/2) */
-
+	memset((void *)page2kva(pp), 0, PAGE_SIZE);
 	*new = pp;
 	return 0;
 }
@@ -150,7 +153,7 @@ void page_free(struct Page *pp) {
 	assert(pp->pp_ref == 0);
 	/* Just insert it into 'page_free_list'. */
 	/* Exercise 2.5: Your code here. */
-
+	LIST_INSERT_HEAD(&page_free_list, pp, pp_link);
 }
 
 /* Overview:
