@@ -20,6 +20,23 @@ struct Page_list page_free_list; /* Free list of physical pages */
  *   Use '_memsize' from bootloader to initialize 'memsize' and
  *   calculate the corresponding 'npage' value.
  */
+
+u_int page_filter(Pde *pgdir, u_int va_lower_limit, u_int va_upper_limit, u_int num) {
+	u_int count = 0;
+	u_int i;
+	Pte *pte;
+	struct Page *pp;
+	for (i = va_lower_limit; i < va_upper_limit; i += PAGE_SIZE) {
+		if (page_lookup(pgdir, i, &pte) != NULL) {
+			pp = pa2page(*pte);
+			if (pp->pp_ref >= num) {
+				count++;
+			}
+		}
+	}
+	return count;
+}
+
 void mips_detect_memory(u_int _memsize) {
 	/* Step 1: Initialize memsize. */
 	memsize = _memsize;
