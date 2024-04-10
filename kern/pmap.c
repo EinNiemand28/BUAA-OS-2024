@@ -239,7 +239,7 @@ int page_insert(Pde *pgdir, u_int asid, struct Page *pp, u_long va, u_int perm) 
 	/* Step 3: Re-get or create the page table entry. */
 	/* If failed to create, return the error. */
 	/* Exercise 2.7: Your code here. (2/3) */
-	if (pgdir_walk(pgdir, va, 1, &pte) == -E_NO_MEM) {
+	if (pgdir_walk(pgdir, va, 1, &pte) != 0) {
 		return -E_NO_MEM;
 	}
 	/* Step 4: Insert the page to the page table entry with 'perm | PTE_C_CACHEABLE | PTE_V'

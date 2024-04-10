@@ -12,6 +12,7 @@
  */
 void tlb_invalidate(u_int asid, u_long va) {
 	tlb_out((va & ~GENMASK(PGSHIFT, 0)) | (asid & (NASID - 1)));
+	/* [31:13](VPN)-[12:8](0)-[7:0](asid) */
 }
 /* End of Key Code "tlb_invalidate" */
 
@@ -57,7 +58,9 @@ void _do_tlb_refill(u_long *pentrylo, u_int va, u_int asid) {
 	 */
 
 	/* Exercise 2.9: Your code here. */
-
+	while (page_lookup(cur_pgdir, va, &ppte) == NULL) {
+		passive_alloc(va, cur_pgdir, asid);
+	}
 	ppte = (Pte *)((u_long)ppte & ~0x7);
 	pentrylo[0] = ppte[0] >> 6;
 	pentrylo[1] = ppte[1] >> 6;
