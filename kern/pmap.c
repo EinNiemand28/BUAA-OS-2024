@@ -514,3 +514,79 @@ void page_check(void) {
 
 	printk("page_check() succeeded!\n");
 }
+
+#include <buddy.h>
+
+struct Page_list buddy_free_list[2];
+
+void buddy_init() {
+	LIST_INIT(&buddy_free_list[0]);
+	LIST_INIT(&buddy_free_list[1]);
+	for (int i = BUDDY_PAGE_BASE; i < BUDDY_PAGE_END; i += PAGE_SIZE) {
+		struct Page *pp = pa2page(i);
+		LIST_REMOVE(pp, pp_link);
+	}
+	for (int i = BUDDY_PAGE_BASE; i < BUDDY_PAGE_END; i += 2 * PAGE_SIZE) {
+		struct Page *pp = pa2page(i);
+		LIST_INSERT_HEAD(&buddy_free_list[1], pp, pp_link);
+	}
+}
+
+int buddy_alloc(u_int size, struct Page **new) {
+	struct Page *pp;
+	u_int idx = ROUND(size, PAGE_SIZE) / PAGE_SIZE - 1;
+	if (idx > 1) {
+		return -E_NO_MEM;
+	}
+	if (!LIST_EMPTY(&buddy_free_list[idx])) {
+		pp = LIST_FIRST(&buddy_free_list[idx]);
+		LIST_REMOVE(pp, pp_link);
+		*new = pp;
+	} else {
+		if (idx == 1) {
+			return -E_NO_MEM;
+		} else {
+			if (LIST_EMPTY(&buddy_free_list[1])) {
+				return -E_NO_MEM;
+			}
+			pp = LIST_FIRST(&buddy_free_list[1]);
+			LIST_REMOVE(pp, pp_link);
+			*new = pp;
+			struct Page *ppp = pa2page(page2pa(pp) + PAGE_SIZE);
+			LIST_INSERT_HEAD(&buddy_free_list[0], ppp, pp_link);
+		}
+	}
+	return idx + 1;
+}
+
+void buddy_free(struct Page *pp, int npp) {
+	if (npp == 1) {
+		struct Page *ppp;
+		int flag = 0;
+		u_int PA = page2pa(pp);
+		u_int PPA;
+		LIST_FOREACH(ppp, &buddy_free_list[0], pp_link) {
+			PPA = page2pa(ppp);
+			if (PPA - PA == PAGE_SIZE && ((PPA >> 12) & 1)) {
+				flag = 1;
+				break;
+			}
+			if (PA - PPA == PAGE_SIZE && ((PA >> 12) & 1)) {
+				flag = 1;
+				break;
+			}
+		}
+		if (flag) {
+			LIST_REMOVE(ppp, pp_link);
+			if (PPA > PA) {
+				LIST_INSERT_HEAD(&buddy_free_list[1], pp, pp_link);
+			} else {
+				LIST_INSERT_HEAD(&buddy_free_list[1], ppp, pp_link);
+			}
+		} else {
+			LIST_INSERT_HEAD(&buddy_free_list[0], pp, pp_link);
+		}
+	} else {
+		LIST_INSERT_HEAD(&buddy_free_list[1], pp, pp_link);
+	}
+}
