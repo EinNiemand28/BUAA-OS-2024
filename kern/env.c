@@ -259,7 +259,6 @@ int env_alloc(struct Env **new, u_int parent_id) {
 	 * recovery. Additionally, set UM to 1 so that when ERET unsets EXL, the processor
 	 * transitions to user mode.
 	 */
-	printk("test status\n");
 	e->env_tf.cp0_status = STATUS_IM7 | STATUS_IE | STATUS_EXL | STATUS_UM;
 	// Reserve space for 'argc' and 'argv'.
 	e->env_tf.regs[29] = USTACKTOP - sizeof(int) - sizeof(char **);
@@ -458,7 +457,6 @@ void env_run(struct Env *e) {
 	 *   If not, we may be switching from a previous env, so save its context into
 	 *   'curenv->env_tf' first.
 	 */
-	printk("test: run start\n");
 	if (curenv) {
 		curenv->env_tf = *((struct Trapframe *)KSTACKTOP - 1);
 	}
@@ -480,7 +478,6 @@ void env_run(struct Env *e) {
 	 */
 	/* Exercise 3.8: Your code here. (2/2) */
 	env_pop_tf(&curenv->env_tf, curenv->env_asid);
-	printk("test: run end\n");
 }
 
 void env_check() {
