@@ -35,8 +35,13 @@ void schedule(int yield) {
 	 *   'TAILQ_FIRST', 'TAILQ_REMOVE', 'TAILQ_INSERT_TAIL'
 	 */
 	/* Exercise 3.12: Your code here. */
+	struct Trapframe *env_tf = ((struct Trapframe *)KSTACKTOP - 1);
+	if (e != NULL) {
+		e->env_clocks += env_tf->cp0_count;
+	}
 	if (yield != 0 || count == 0 || e == NULL || e->env_status != ENV_RUNNABLE) {
 		if (e != NULL && e->env_status == ENV_RUNNABLE) {
+			e->env_runs++;
 			TAILQ_REMOVE(&env_sched_list, e, env_sched_link);
 			TAILQ_INSERT_TAIL(&env_sched_list, e, env_sched_link);
 		}
@@ -45,6 +50,7 @@ void schedule(int yield) {
 		}
 		e = TAILQ_FIRST(&env_sched_list);
 		count = e->env_pri;
+		e->env_scheds++;
 	}
 	count--;
 	env_run(e);

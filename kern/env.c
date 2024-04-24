@@ -18,6 +18,13 @@ static Pde *base_pgdir;
 
 static uint32_t asid_bitmap[NASID / 32] = {0};
 
+void env_stat(struct Env *e, u_int *pri, u_int *scheds, u_int *runs, u_int * clocks) {
+	*pri = e->env_pri;
+	*scheds = e->env_scheds;
+	*runs = e->env_runs;
+	*clocks = e->env_clocks;
+}
+
 /* Overview:
  *  Allocate an unused ASID.
  *
@@ -229,8 +236,8 @@ int env_alloc(struct Env **new, u_int parent_id) {
 
 	/* Step 1: Get a free Env from 'env_free_list' */
 	/* Exercise 3.4: Your code here. (1/4) */
-	if (LIST_EMPTY(&env_free_list)) {
-		return -E_NO_FREE_ENV;
+	if ((r = LIST_EMPTY(&env_free_list)) != 0) {
+		return r;
 	}
 	e = LIST_FIRST(&env_free_list);
 	/* Step 2: Call a 'env_setup_vm' to initialize the user address space for this new Env. */
@@ -262,7 +269,8 @@ int env_alloc(struct Env **new, u_int parent_id) {
 	e->env_tf.cp0_status = STATUS_IM7 | STATUS_IE | STATUS_EXL | STATUS_UM;
 	// Reserve space for 'argc' and 'argv'.
 	e->env_tf.regs[29] = USTACKTOP - sizeof(int) - sizeof(char **);
-	//printk("sp: %x\n", e->env_tf.regs[29]);
+	e->env_tf.cp0_count = 0;
+	//32-bit pointer->4B
 
 	/* Step 5: Remove the new Env from env_free_list. */
 	/* Exercise 3.4: Your code here. (4/4) */
@@ -358,6 +366,9 @@ struct Env *env_create(const void *binary, size_t size, int priority) {
 	/* Step 2: Assign the 'priority' to 'e' and mark its 'env_status' as runnable. */
 	/* Exercise 3.7: Your code here. (2/3) */
 	e->env_pri = priority;
+	e->env_scheds = 0;
+	e->env_runs = 0;
+	e->env_clocks = 0;
 	e->env_status = ENV_RUNNABLE;
 	/* Step 3: Use 'load_icode' to load the image from 'binary', and insert 'e' into
 	 * 'env_sched_list' using 'TAILQ_INSERT_HEAD'. */
