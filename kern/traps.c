@@ -33,11 +33,13 @@ void do_ri(struct Trapframe *tf) {
 	u_int epc = tf->cp0_epc;
 	Pte *pte;
 	page_lookup(curenv->env_pgdir, epc, &pte);
-	u_int *inst = (u_int *) (PTE_ADDR(pte) | (epc & (0xfff)));
-	u_int rs = *inst & (0x1f << 21);
-	u_int rt = *inst & (0x1f << 16);
-	u_int rd = *inst & (0x1f << 11);
-	if (((*inst & (0x3f << 26)) == 0) && ((*inst & 0x3f) == 0x3f)) {
+	u_int *inst = (u_int *) (KADDR(PTE_ADDR(*pte)) | (epc & 0xfff));
+	// printk("%032b\n", *inst);
+	u_int rs = (*inst >> 21) & 0x1f;
+	u_int rt = (*inst >> 16) & 0x1f;
+	u_int rd = (*inst >> 11) & 0x1f;
+	// printk("rs: %d\nrt: %d\nrd: %d\n", rs, rt, rd);
+	if (((*inst >> 26) == 0) && ((*inst & 0x3f) == 0x3f)) {
 		u_int res = 0;
 		int i = 0;
 		for (i = 0; i < 32; i+=8) {
@@ -50,7 +52,7 @@ void do_ri(struct Trapframe *tf) {
 			}
 		}
 		tf->regs[rd] = res;
-	} else if (((*inst & (0x3f << 26)) == 0) && ((*inst & 0x3f) == 0x3e)) {
+	} else if (((*inst >> 26) == 0) && ((*inst & 0x3f) == 0x3e)) {
 		u_int *p = (u_int *)tf->regs[rs];
 		u_int val = *p;
 		if (val == tf->regs[rt]) {
