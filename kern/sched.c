@@ -41,7 +41,11 @@ void schedule(int yield) {
 	}
 	if (yield != 0 || count == 0 || e == NULL || e->env_status != ENV_RUNNABLE) {
 		if (e != NULL && e->env_status == ENV_RUNNABLE) {
-			e->env_runs++;
+			if (yield) {
+				e->env_runs++;
+				e->env_clocks = 0;
+			}
+			//e->env_clocks = 0;
 			TAILQ_REMOVE(&env_sched_list, e, env_sched_link);
 			TAILQ_INSERT_TAIL(&env_sched_list, e, env_sched_link);
 		}
