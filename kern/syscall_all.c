@@ -14,6 +14,48 @@ extern struct Env *curenv;
  * Pre-Condition:
  * 	`c` is the character you want to print.
  */
+
+int sems[15];
+int sems_valid[15] = {0};
+
+void sys_sem_open(int sem_id, int n) {
+	// Lab 4-1-Exam: Your code here. (6/9)
+	if (sems_valid[sem_id] == 0) {
+		sems_valid[sem_id] = 1;
+		sems[sem_id] = n;
+	}
+}
+
+int sys_sem_wait(int sem_id) {
+	// Lab 4-1-Exam: Your code here. (7/9)
+	if (sems_valid[sem_id] == 0) {
+		return -E_SEM_NOT_OPEN;
+	}
+	int r = sems[sem_id];
+	if (r > 0) {
+		sems[sem_id] -= 1;
+	}
+	return r;
+}
+
+int sys_sem_post(int sem_id) {
+	// Lab 4-1-Exam: Your code here. (8/9)
+	if (sems_valid[sem_id] == 0) {
+		return -E_SEM_NOT_OPEN;
+	}
+	sems[sem_id] += 1;
+	return 0;
+}
+
+int sys_sem_kill(int sem_id) {
+	// Lab 4-1-Exam: Your code here. (9/9)
+	if (sems_valid[sem_id] == 0) {
+		return -E_SEM_NOT_OPEN;
+	}
+	sems_valid[sem_id] = 0;
+	return 0;
+}
+
 void sys_putchar(int c) {
 	printcharc((char)c);
 	return;
@@ -500,6 +542,10 @@ void *syscall_table[MAX_SYSNO] = {
     [SYS_cgetc] = sys_cgetc,
     [SYS_write_dev] = sys_write_dev,
     [SYS_read_dev] = sys_read_dev,
+    [SYS_sem_open] = sys_sem_open,
+    [SYS_sem_wait] = sys_sem_wait,
+    [SYS_sem_post] = sys_sem_post,
+    [SYS_sem_kill] = sys_sem_kill,
 };
 
 /* Overview:
@@ -522,6 +568,7 @@ void do_syscall(struct Trapframe *tf) {
 
 	/* Step 1: Add the EPC in 'tf' by a word (size of an instruction). */
 	/* Exercise 4.2: Your code here. (1/4) */
+	//printk("syscall: %08x\n", tf->cp0_epc);
 	tf->cp0_epc = tf->cp0_epc + 4;
 	/* Step 2: Use 'sysno' to get 'func' from 'syscall_table'. */
 	/* Exercise 4.2: Your code here. (2/4) */
