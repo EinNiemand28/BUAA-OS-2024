@@ -19,78 +19,6 @@ void sys_putchar(int c) {
 	return;
 }
 
-int sys_msg_send(u_int envid, u_int value, u_int srcva, u_int perm) {
-	struct Env *e;
-	struct Page *p;
-	struct Msg *m;
-
-	if (srcva != 0 && is_illegal_va(srcva)) {
-		return -E_INVAL;
-	}
-	try(envid2env(envid, &e, 0));
-	if (TAILQ_EMPTY(&msg_free_list)) {
-		return -E_NO_MSG;
-	}
-
-	/* Your Code Here (1/3) */
-	m = TAILQ_FIRST(&msg_free_list);
-	TAILQ_REMOVE(&msg_free_list, m, msg_link);
-	m->msg_tier += 1;
-	m->msg_status = MSG_SENT;
-	m->msg_value = value;
-	m->msg_from = envid;
-	m->msg_perm = perm;
-	p = page_lookup(curenv->env_pgdir, srcva, NULL);
-	if (p != NULL) {
-		p->pp_ref += 1;
-		m->msg_page = p;
-	}
-	TAILQ_INSERT_TAIL(&e->env_msg_list, m, msg_link);
-	return msg2id(m);
-}
-
-int sys_msg_recv(u_int dstva) {
-	struct Msg *m;
-	struct Page *p;
-
-	if (dstva != 0 && is_illegal_va(dstva)) {
-		return -E_INVAL;
-	}
-	if (TAILQ_EMPTY(&curenv->env_msg_list)) {
-		return -E_NO_MSG;
-	}
-
-	/* Your Code Here (2/3) */
-	m = TAILQ_FIRST(&curenv->env_msg_list);
-	TAILQ_REMOVE(&curenv->env_msg_list, m, msg_link);
-	if (m->msg_page != NULL) {
-		m->msg_page->pp_ref -= 1;
-		if (dstva != 0) {
-			try(page_insert(curenv->env_pgdir, curenv->env_asid, m->msg_page, dstva, m->msg_perm));
-		}
-	}
-	curenv->env_msg_value = m->msg_value;
-	curenv->env_msg_from = m->msg_from;
-	curenv->env_msg_perm = m->msg_perm;
-	m->msg_status = MSG_RECV;
-	TAILQ_INSERT_TAIL(&msg_free_list, m, msg_link);
-	return 0;
-}
-
-int sys_msg_status(u_int msgid) {
-	struct Msg *m;
-
-	/* Your Code Here (3/3) */
-	m = msgs[MSGX(msgid)];
-	if (msgid == msg2id(m)) {
-		return m->msg_status;
-	} else if (msgid < msg2id(m)) {
-		return MSG_RECV;
-	} else {
-		return -E_INVAL;
-	}
-}
-
 /* Overview:
  * 	This function is used to print a string of bytes on screen.
  *
@@ -487,6 +415,79 @@ int sys_ipc_try_send(u_int envid, u_int value, u_int srcva, u_int perm) {
 	return 0;
 }
 
+int sys_msg_send(u_int envid, u_int value, u_int srcva, u_int perm) {
+	struct Env *e;
+	struct Page *p;
+	struct Msg *m;
+
+	if (srcva != 0 && is_illegal_va(srcva)) {
+		return -E_INVAL;
+	}
+	try(envid2env(envid, &e, 0));
+	if (TAILQ_EMPTY(&msg_free_list)) {
+		return -E_NO_MSG;
+	}
+	/* Your Code Here (1/3) */
+	m = TAILQ_FIRST(&msg_free_list);
+	TAILQ_REMOVE(&msg_free_list, m, msg_link);
+	m->msg_tier += 1;
+	m->msg_status = MSG_SENT;
+	m->msg_value = value;
+	m->msg_from = envid;
+	m->msg_perm = perm;
+	p = page_lookup(curenv->env_pgdir, srcva, NULL);
+	if (p != NULL) {
+		p->pp_ref += 1;
+		m->msg_page = p;
+	}
+	printk("test2\n");
+	TAILQ_INSERT_TAIL(&e->env_msg_list, m, msg_link);
+	return msg2id(m);
+}
+
+int sys_msg_recv(u_int dstva) {
+	struct Msg *m;
+	struct Page *p;
+
+	if (dstva != 0 && is_illegal_va(dstva)) {
+		return -E_INVAL;
+	}
+	if (TAILQ_EMPTY(&curenv->env_msg_list)) {
+		return -E_NO_MSG;
+	}
+
+	/* Your Code Here (2/3) */
+	m = TAILQ_FIRST(&curenv->env_msg_list);
+	TAILQ_REMOVE(&curenv->env_msg_list, m, msg_link);
+	if (m->msg_page != NULL) {
+		m->msg_page->pp_ref -= 1;
+		if (dstva != 0) {
+			try(page_insert(curenv->env_pgdir, curenv->env_asid, m->msg_page, dstva, m->msg_perm));
+		}
+	}
+	curenv->env_msg_value = m->msg_value;
+	curenv->env_msg_from = m->msg_from;
+	curenv->env_msg_perm = m->msg_perm;
+	m->msg_status = MSG_RECV;
+	TAILQ_INSERT_TAIL(&msg_free_list, m, msg_link);
+	return 0;
+}
+
+int sys_msg_status(u_int msgid) {
+	struct Msg *m;
+
+	/* Your Code Here (3/3) */
+	m = &msgs[MSGX(msgid)];
+	if (msgid == msg2id(m)) {
+		return m->msg_status;
+	} else if (msgid < msg2id(m)) {
+		return MSG_RECV;
+	} else {
+		return -E_INVAL;
+	}
+}
+
+
 // XXX: kernel does busy waiting here, blocking all envs
 int sys_cgetc(void) {
 	int ch;
@@ -616,3 +617,76 @@ void do_syscall(struct Trapframe *tf) {
 	/* Exercise 4.2: Your code here. (4/4) */
 	tf->regs[2] = (*func) (arg1, arg2, arg3, arg4, arg5);
 }
+/*
+int sys_msg_send(u_int envid, u_int value, u_int srcva, u_int perm) {
+	struct Env *e;
+	struct Page *p;
+	struct Msg *m;
+
+	if (srcva != 0 && is_illegal_va(srcva)) {
+		return -E_INVAL;
+	}
+	try(envid2env(envid, &e, 0));
+	if (TAILQ_EMPTY(&msg_free_list)) {
+		return -E_NO_MSG;
+	}
+
+	 Your Code Here (1/3) 
+	m = TAILQ_FIRST(&msg_free_list);
+	TAILQ_REMOVE(&msg_free_list, m, msg_link);
+	m->msg_tier += 1;
+	m->msg_status = MSG_SENT;
+	m->msg_value = value;
+	m->msg_from = envid;
+	m->msg_perm = perm;
+	p = page_lookup(curenv->env_pgdir, srcva, NULL);
+	if (p != NULL) {
+		p->pp_ref += 1;
+		m->msg_page = p;
+	}
+	TAILQ_INSERT_TAIL(&e->env_msg_list, m, msg_link);
+	return msg2id(m);
+}
+
+int sys_msg_recv(u_int dstva) {
+	struct Msg *m;
+	struct Page *p;
+
+	if (dstva != 0 && is_illegal_va(dstva)) {
+		return -E_INVAL;
+	}
+	if (TAILQ_EMPTY(&curenv->env_msg_list)) {
+		return -E_NO_MSG;
+	}
+
+	 Your Code Here (2/3) 
+	m = TAILQ_FIRST(&curenv->env_msg_list);
+	TAILQ_REMOVE(&curenv->env_msg_list, m, msg_link);
+	if (m->msg_page != NULL) {
+		m->msg_page->pp_ref -= 1;
+		if (dstva != 0) {
+			try(page_insert(curenv->env_pgdir, curenv->env_asid, m->msg_page, dstva, m->msg_perm));
+		}
+	}
+	curenv->env_msg_value = m->msg_value;
+	curenv->env_msg_from = m->msg_from;
+	curenv->env_msg_perm = m->msg_perm;
+	m->msg_status = MSG_RECV;
+	TAILQ_INSERT_TAIL(&msg_free_list, m, msg_link);
+	return 0;
+}
+
+int sys_msg_status(u_int msgid) {
+	struct Msg *m;
+
+	 Your Code Here (3/3)
+	m = msgs[MSGX(msgid)];
+	if (msgid == msg2id(m)) {
+		return m->msg_status;
+	} else if (msgid < msg2id(m)) {
+		return MSG_RECV;
+	} else {
+		return -E_INVAL;
+	}
+}
+*/
