@@ -434,7 +434,7 @@ int sys_msg_send(u_int envid, u_int value, u_int srcva, u_int perm) {
 	m->msg_status = MSG_SENT;
 	m->msg_value = value;
 	m->msg_from = curenv->env_id;
-	m->msg_perm = perm;
+	m->msg_perm = perm | 0x80;
 	p = page_lookup(curenv->env_pgdir, srcva, NULL);
 	if (p != NULL) {
 		p->pp_ref += 1;
