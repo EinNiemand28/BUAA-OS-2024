@@ -433,14 +433,13 @@ int sys_msg_send(u_int envid, u_int value, u_int srcva, u_int perm) {
 	m->msg_tier += 1;
 	m->msg_status = MSG_SENT;
 	m->msg_value = value;
-	m->msg_from = envid;
+	m->msg_from = curenv->env_id;
 	m->msg_perm = perm;
 	p = page_lookup(curenv->env_pgdir, srcva, NULL);
 	if (p != NULL) {
 		p->pp_ref += 1;
 		m->msg_page = p;
 	}
-	printk("test2\n");
 	TAILQ_INSERT_TAIL(&e->env_msg_list, m, msg_link);
 	return msg2id(m);
 }
