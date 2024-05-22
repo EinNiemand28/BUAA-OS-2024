@@ -407,6 +407,7 @@ void env_free(struct Env *e) {
 	printk("[%08x] free env %08x\n", curenv ? curenv->env_id : 0, e->env_id);
 
 	/* Hint: Flush all mapped pages in the user portion of the address space */
+	if (e->cnt == 1) {
 	for (pdeno = 0; pdeno < PDX(UTOP); pdeno++) {
 		/* Hint: only look at mapped page tables. */
 		if (!(e->env_pgdir[pdeno] & PTE_V)) {
@@ -429,15 +430,14 @@ void env_free(struct Env *e) {
 		tlb_invalidate(e->env_asid, UVPT + (pdeno << PGSHIFT));
 	}
 	/* Hint: free the page directory. */
-	if (e->cnt == 1) {
 	page_decref(pa2page(PADDR(e->env_pgdir)));
 	/* Hint: free the ASID */
 	asid_free(e->env_asid);
+	/* Hint: invalidate page directory in TLB */
+	tlb_invalidate(e->env_asid, UVPT + (PDX(UVPT) << PGSHIFT));
 	} else {
 		e->cnt -= 1;
 	}
-	/* Hint: invalidate page directory in TLB */
-	tlb_invalidate(e->env_asid, UVPT + (PDX(UVPT) << PGSHIFT));
 	/* Hint: return the environment to the free list. */
 	e->env_status = ENV_FREE;
 	LIST_INSERT_HEAD((&env_free_list), (e), env_link);
