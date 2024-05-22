@@ -8,6 +8,10 @@ void syscall_putchar(int ch) {
 	msyscall(SYS_putchar, ch);
 }
 
+int syscall_clone(void *func, void *child_stack) {
+	return msyscall(SYS_clone, func, child_stack);
+}
+
 int syscall_print_cons(const void *str, u_int num) {
 	return msyscall(SYS_print_cons, str, num);
 }

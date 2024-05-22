@@ -481,6 +481,20 @@ int sys_read_dev(u_int va, u_int pa, u_int len) {
 	return 0;
 }
 
+int sys_clone(void *func, void *child_stack) {
+	if (curenv->cnt >= 64) {
+		return -E_ACT_ENV_NUM_EXCEED;
+	}
+	struct Env *e;
+	try(env_clone(&e, curenv->env_id));
+	e->env_tf = curenv->env_tf;
+	e->env_tf.regs[2] = (u_int) func;
+	e->env_tf.regs[29] = (u_int) child_stack;
+	e->env_status = ENV_RUNNABLE;
+	TAILQ_INSERT_TAIL(&env_sched_list, e, env_sched_link);
+	return 0;
+}
+
 void *syscall_table[MAX_SYSNO] = {
     [SYS_putchar] = sys_putchar,
     [SYS_print_cons] = sys_print_cons,
@@ -500,6 +514,7 @@ void *syscall_table[MAX_SYSNO] = {
     [SYS_cgetc] = sys_cgetc,
     [SYS_write_dev] = sys_write_dev,
     [SYS_read_dev] = sys_read_dev,
+    [SYS_clone] = sys_clone,
 };
 
 /* Overview:

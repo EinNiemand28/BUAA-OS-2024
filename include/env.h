@@ -26,7 +26,7 @@ struct Env {
 	Pde *env_pgdir;			 // page directory
 	TAILQ_ENTRY(Env) env_sched_link; // intrusive entry in 'env_sched_list'
 	u_int env_pri;			 // schedule priority
-
+	u_int cnt;
 	// Lab 4 IPC
 	u_int env_ipc_value;   // the value sent to us
 	u_int env_ipc_from;    // envid of the sender
@@ -57,7 +57,7 @@ void env_run(struct Env *e) __attribute__((noreturn));
 
 void env_check(void);
 void envid2env_check(void);
-
+int env_clone(struct Env **e, u_int parent_id);
 #define ENV_CREATE_PRIORITY(x, y)                                                                  \
 	({                                                                                         \
 		extern u_char binary_##x##_start[];                                                \

@@ -198,6 +198,7 @@ static int env_setup_vm(struct Env *e) {
 	/* Exercise 3.3: Your code here. */
 	p->pp_ref++;
 	e->env_pgdir = (Pde *) page2kva(p);
+	e->cnt = 1;
 	/* Step 2: Copy the template page directory 'base_pgdir' to 'e->env_pgdir'. */
 	/* Hint:
 	 *   As a result, the address space of all envs is identical in [UTOP, UVPT).
@@ -279,6 +280,26 @@ int env_alloc(struct Env **new, u_int parent_id) {
 	return 0;
 }
 
+int env_clone(struct Env **new, u_int parent_id) {
+	int r;
+	struct Env *e;
+	if (LIST_EMPTY(&env_free_list)) {
+		return -E_NO_FREE_ENV;
+	}
+	e = LIST_FIRST(&env_free_list);
+	e->env_pgdir = envs[ENVX(parent_id)].env_pgdir;
+	e->cnt = envs[ENVX(parent_id)].cnt + 1;
+	e->env_user_tlb_mod_entry = 0;
+	e->env_runs = 0;
+	e->env_id = mkenvid(e);
+	e->env_asid = envs[ENVX(parent_id)].env_asid;
+	e->env_parent_id = parent_id;
+	e->env_tf.cp0_status = STATUS_IM7 | STATUS_IE | STATUS_EXL | STATUS_UM;
+	e->env_tf.regs[29] = USTACKTOP - sizeof(int) -sizeof(char **);
+	LIST_REMOVE(e, env_link);
+	*new = e;
+	return 0;
+}
 /* Overview:
  *   Load a page into the user address space of an env with permission 'perm'.
  *   If 'src' is not NULL, copy the 'len' bytes from 'src' into 'offset' at this page.
@@ -408,9 +429,13 @@ void env_free(struct Env *e) {
 		tlb_invalidate(e->env_asid, UVPT + (pdeno << PGSHIFT));
 	}
 	/* Hint: free the page directory. */
+	if (e->cnt == 1) {
 	page_decref(pa2page(PADDR(e->env_pgdir)));
 	/* Hint: free the ASID */
 	asid_free(e->env_asid);
+	} else {
+		e->cnt -= 1;
+	}
 	/* Hint: invalidate page directory in TLB */
 	tlb_invalidate(e->env_asid, UVPT + (PDX(UVPT) << PGSHIFT));
 	/* Hint: return the environment to the free list. */
