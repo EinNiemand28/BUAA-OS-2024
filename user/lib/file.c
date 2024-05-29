@@ -47,7 +47,7 @@ int open(const char *path, int mode) {
 	u_int size, fileid;
 	/* Exercise 5.9: Your code here. (3/5) */
 	va = (char *) fd2data(fd);
-	ffd = (struct Filefl *) fd;
+	ffd = (struct Filefd *) fd;
 	fileid = ffd->f_fileid;
 	size = ffd->f_file.f_size;
 	// Step 4: Map the file content using 'fsipc_map'.

@@ -144,7 +144,7 @@ int map_block(u_int blockno) {
 	// Step 2: Alloc a page in permission 'PTE_D' via syscall.
 	// Hint: Use 'disk_addr' for the virtual address.
 	/* Exercise 5.7: Your code here. (2/5) */
-	try(syscall_mem_alloc(0, disk_addr(blockno), PTE_V));
+	try(syscall_mem_alloc(0, disk_addr(blockno), PTE_D));
 }
 
 // Overview:
