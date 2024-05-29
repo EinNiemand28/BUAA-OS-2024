@@ -29,6 +29,7 @@ void test_copy_read(char *copy_src, char *copy_dst, char *src_file, char *dst_fi
 	debugf("copy return value: %d\n", r);
 
 	r = open(dst_file, O_RDWR);
+	debugf("%d\n", open("target/rr", O_RDWR));
 	os_assert(r >= 0, "failed to open %s, return value: %d", dst_file, r);
 	read(r, buf2, 2048);
 	os_assert(strcmp(buf1, buf2) == 0, "copy failed, buf1 = %s, buf2 = %s", buf1, buf2);

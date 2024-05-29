@@ -136,3 +136,20 @@ int fsipc_remove(const char *path) {
 int fsipc_sync(void) {
 	return fsipc(FSREQ_SYNC, fsipcbuf, 0, 0);
 }
+
+int fsipc_copy(const char *src_path, const char *dst_path) {
+   // Lab 5-2-Exam: Your code here. (1/6)
+   	int len = strlen(src_path);
+	if (len == 0 || len > MAXPATHLEN) {
+		return -E_BAD_PATH;
+	}
+	len = strlen(dst_path);
+	if (len == 0 || len > MAXPATHLEN) {
+		return -E_BAD_PATH;
+	}
+	struct Fsreq_copy *req;
+	strcpy((void *) req->req_src_path, (void *) src_path);
+	strcpy((void *) req->req_dst_path, (void *) dst_path);
+	return fsipc(FSREQ_COPY, req, 0, 0);
+}
+

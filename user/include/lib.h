@@ -118,6 +118,8 @@ int read_map(int fd, u_int offset, void **blk);
 int remove(const char *path);
 int ftruncate(int fd, u_int size);
 int sync(void);
+int copy(const char *src_path, const char *dst_path);
+int fsipc_copy(const char *,const char *);
 
 #define user_assert(x)                                                                             \
 	do {                                                                                       \
