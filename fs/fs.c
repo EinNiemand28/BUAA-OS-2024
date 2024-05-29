@@ -813,7 +813,7 @@ int copy_file_content(struct File *src, struct File *dst) {
       // Lab 5-2-Exam: Your code here. (3/6)
 	try(file_get_block(src, i, &src_blk));
 	try(file_get_block(dst, i, &dst_blk));
-	memcpy(dst_blk, src_blk, 4100);
+	memcpy(dst_blk, src_blk, BLOCK_SIZE);
    }
    // Flush the changes to the destination file
    file_flush(dst);
