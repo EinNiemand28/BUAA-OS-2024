@@ -3,6 +3,8 @@
 
 int main() {
 	debugf("devtst begin\n");
+	// debugf("%d\n", FILE2BLK);
+	// debugf("%d %d\n", BLOCK_SIZE, sizeof(struct File));
 	int i = 0;
 	int r;
 	char buf[32] __attribute__((aligned(4))) = {0};
