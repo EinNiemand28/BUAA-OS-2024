@@ -337,6 +337,7 @@ void serve_sync(u_int envid) {
 void serve_copy(u_int envid, struct Fsreq_copy *rq){
    // Lab 5-2-Exam: Your code here. (6/6)
 	directory_copy(rq->req_src_path, rq->req_dst_path);
+	//debugf("%s %s\n", rq->req_src_path, rq->req_dst_path);
 	ipc_send(envid, 0, 0, 0);
 }
 

@@ -814,7 +814,6 @@ int copy_file_content(struct File *src, struct File *dst) {
 	try(file_get_block(src, i, &src_blk));
 	try(file_get_block(dst, i, &dst_blk));
 	strcpy(dst_blk, src_blk);
-	file_dirty(dst, i * BLOCK_SIZE);
    }
    // Flush the changes to the destination file
    file_flush(dst);
@@ -847,11 +846,10 @@ int copy_directory_contents(struct File *src, struct File *dst) {
          // depending on the value of 'f_type'.
          // Lab 5-2-Exam: Your code here. (5/6)
 	if (dst_file->f_type == FTYPE_REG) {
-		copy_file_content(blk + j, dst_file);
+		try(copy_file_content(blk + j, dst_file));
 	} else {
-		copy_directory_contents(blk + j, dst_file);
+		try(copy_directory_contents(blk + j, dst_file));
 	}
-	file_dirty(dst, i * BLOCK_SIZE);
       }
    }
    file_flush(dst);

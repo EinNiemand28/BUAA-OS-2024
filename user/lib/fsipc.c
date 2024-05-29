@@ -147,9 +147,11 @@ int fsipc_copy(const char *src_path, const char *dst_path) {
 	if (len == 0 || len > MAXPATHLEN) {
 		return -E_BAD_PATH;
 	}
-	struct Fsreq_copy *req;
-	strcpy((void *) req->req_src_path, (void *) src_path);
-	strcpy((void *) req->req_dst_path, (void *) dst_path);
+	struct Fsreq_copy *req = (struct Fsreq_copy *) fsipcbuf;
+	//debugf("%s %s\n", dst_path, src_path);
+	strcpy(req->req_dst_path, dst_path);
+	strcpy(req->req_src_path, src_path);
+	//debugf("%s %s\n", req->req_dst_path, req->req_src_path);
 	return fsipc(FSREQ_COPY, req, 0, 0);
 }
 
