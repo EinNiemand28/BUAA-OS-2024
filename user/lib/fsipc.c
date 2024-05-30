@@ -136,3 +136,10 @@ int fsipc_remove(const char *path) {
 int fsipc_sync(void) {
 	return fsipc(FSREQ_SYNC, fsipcbuf, 0, 0);
 }
+int fsipc_chmod(const char *path, u_int mode, int type) {
+	struct Fsreq_chmod *req = (struct Fsreq_chmod *) fsipcbuf;
+	strcpy(req->req_path, path);
+	req->mode = mod;
+	req->type = type;
+	return fsipc(FSREQ_CHMOD, req, 0, 0);
+}
