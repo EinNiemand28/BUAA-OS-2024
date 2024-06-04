@@ -94,7 +94,7 @@ int parsecmd(char **argv, int *rightpipe) {
 
 			//user_panic("< redirection not implemented");
 			if ((r = open(t, O_RDONLY)) < 0) {
-				debugf("read file error: %d\n", r);
+				debugf("failed to open \'%s'\: %d\n", t, r);
 				exit();
 			}
 			fd = r;
@@ -115,7 +115,7 @@ int parsecmd(char **argv, int *rightpipe) {
 
 			//user_panic("> redirection not implemented");
 			if ((r = open(t, O_WRONLY | O_CREAT | O_TRUNC)) < 0) {
-				debugf("write file error: %d\n", r);
+				debugf("failed to open \'%s\': %d\n", t, r);
 				exit();
 			}
 			fd = r;
@@ -143,7 +143,7 @@ int parsecmd(char **argv, int *rightpipe) {
 
 			//user_panic("| not implemented");
 			if ((r = pipe(p)) < 0) {
-				debugf("allocate pipe error: %d\n", r);
+				debugf("failed to allocate a pipe: %d\n", r);
 				exit();
 			}
 			if ((*rightpipe = fork()) == 0) {

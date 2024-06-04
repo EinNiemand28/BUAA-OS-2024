@@ -153,6 +153,7 @@ static int pipe_read(struct Fd *fd, void *vbuf, u_int n, u_int offset) {
 		}
 		rbuf[i] = p->p_buf[p->p_rpos++ % PIPE_SIZE];
 	}
+	return n;
 }
 
 /* Overview:
@@ -180,7 +181,7 @@ static int pipe_write(struct Fd *fd, const void *vbuf, u_int n, u_int offset) {
 	//  - If the pipe isn't closed, keep yielding until the buffer isn't full or the
 	//    pipe is closed.
 	/* Exercise 6.1: Your code here. (3/3) */
-	p = (struct Pipe *) fd;
+	p = (struct Pipe *) fd2data(fd);
 	wbuf = (char *) vbuf;
 	for (i = 0; i < n; ++i) {
 		while (p->p_wpos >= p->p_rpos + PIPE_SIZE) {
