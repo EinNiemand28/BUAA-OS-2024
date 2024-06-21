@@ -2,7 +2,7 @@
 #include <lib.h>
 
 #define WHITESPACE " \t\r\n"
-#define SYMBOLS "<|>&;()"
+#define SYMBOLS "<|>&;()\'"
 
 /* Overview:
  *   Parse the next token from the string at s.
@@ -31,6 +31,14 @@ int _gettoken(char *s, char **p1, char **p2) {
 	}
 	if (*s == 0) {
 		return 0;
+	}
+
+	if (*s == '\"') {
+		*p1 = ++s;
+		while (*s != '\"' && *s++);
+		*s++ = 0;
+		*p2 = s;
+		return 'w';
 	}
 
 	if (strchr(SYMBOLS, *s)) {
@@ -74,6 +82,15 @@ int parsecmd(char **argv, int *rightpipe) {
 		switch (c) {
 		case 0:
 			return argc;
+		case ';':;
+			int leftcmd = fork();
+			if (leftcmd) {
+				wait(leftcmd);
+				return parsecmd(argv, rightpipe);
+			} else {
+				return argc;
+			}
+			break;
 		case 'w':
 			if (argc >= MAXARGS) {
 				debugf("too many arguments\n");
@@ -94,18 +111,30 @@ int parsecmd(char **argv, int *rightpipe) {
 
 			//user_panic("< redirection not implemented");
 			if ((r = open(t, O_RDONLY)) < 0) {
-				debugf("failed to open \'%s'\: %d\n", t, r);
+				debugf("failed to open \'%s\': %d\n", t, r);
 				exit();
 			}
 			fd = r;
 			dup(fd, 0);
 			close(fd);
 			break;
-		case '>':
-			if (gettoken(0, &t) != 'w') {
+		case '>':;
+			int cc = gettoken(0, &t);
+			int mode = O_WRONLY | O_CREAT;
+			if (cc == '>') {
+				mode |= O_APPEND;
+				if ((cc = gettoken(0, &t)) != 'w') {
+					debugf("syntax error: > not followed by word\n");
+					exit();
+				}
+			} else if (cc != 'w') {
 				debugf("syntax error: > not followed by word\n");
 				exit();
+			} else {
+				mode |= O_TRUNC;
 			}
+			//debugf("%d\n", mode & O_APPEND);
+
 			// Open 't' for writing, create it if not exist and trunc it if exist, dup
 			// it onto fd 1, and then close the original fd.
 			// If the 'open' function encounters an error,
@@ -114,7 +143,7 @@ int parsecmd(char **argv, int *rightpipe) {
 			/* Exercise 6.5: Your code here. (2/3) */
 
 			//user_panic("> redirection not implemented");
-			if ((r = open(t, O_WRONLY | O_CREAT | O_TRUNC)) < 0) {
+			if ((r = open(t, mode)) < 0) {
 				debugf("failed to open \'%s\': %d\n", t, r);
 				exit();
 			}
@@ -198,6 +227,7 @@ void readline(char *buf, u_int n) {
 			exit();
 		}
 		if (buf[i] == '\b' || buf[i] == 0x7f) {
+		//  backspace         delete
 			if (i > 0) {
 				i -= 2;
 			} else {
