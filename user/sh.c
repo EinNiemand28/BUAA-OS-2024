@@ -82,13 +82,16 @@ int parsecmd(char **argv, int *rightpipe) {
 		switch (c) {
 		case 0:
 			return argc;
-		case ';':;
-			int leftcmd = fork();
-			if (leftcmd) {
-				wait(leftcmd);
-				return parsecmd(argv, rightpipe);
-			} else {
+		case ';':
+			if ((*rightpipe = fork()) == 0) {
 				return argc;
+			} else {
+				wait(*rightpipe);
+				close(0);
+				close(1);
+				dup(opencons(), 1);
+				dup(1, 0);
+				return parsecmd(argv, rightpipe);
 			}
 			break;
 		case 'w':
