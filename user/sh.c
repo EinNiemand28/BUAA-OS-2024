@@ -2,7 +2,7 @@
 #include <lib.h>
 
 #define WHITESPACE " \t\r\n"
-#define SYMBOLS "<|>&;()\'"
+#define SYMBOLS "<|>&;()`"
 
 /* Overview:
  *   Parse the next token from the string at s.
@@ -19,6 +19,9 @@
  *   The buffer is modified to turn the spaces after words into zero bytes ('\0'), so that the
  *   returned token is a null-terminated string.
  */
+
+int backquote;
+
 int _gettoken(char *s, char **p1, char **p2) {
 	*p1 = 0;
 	*p2 = 0;
@@ -46,6 +49,9 @@ int _gettoken(char *s, char **p1, char **p2) {
 		*p1 = s;
 		*s++ = 0;
 		*p2 = s;
+		if (t == '`') {
+			backquote ^= 1;
+		}
 		return t;
 	}
 
@@ -82,6 +88,11 @@ int parsecmd(char **argv, int *rightpipe) {
 		switch (c) {
 		case 0:
 			return argc;
+		case '`':
+			if (backquote) {
+				// todo
+			}
+			break;
 		case ';':
 			if ((*rightpipe = fork()) == 0) {
 				return argc;
@@ -130,11 +141,11 @@ int parsecmd(char **argv, int *rightpipe) {
 					debugf("syntax error: > not followed by word\n");
 					exit();
 				}
-			} else if (cc != 'w') {
+			} else if (cc == 'w') {
+				mode |= O_TRUNC;
+			} else {
 				debugf("syntax error: > not followed by word\n");
 				exit();
-			} else {
-				mode |= O_TRUNC;
 			}
 			//debugf("%d\n", mode & O_APPEND);
 
@@ -241,6 +252,12 @@ void readline(char *buf, u_int n) {
 			}
 		}
 		if (buf[i] == '\r' || buf[i] == '\n') {
+			for (r = 0; buf[r]; r++) {
+				if (buf[r] == '#') {
+					buf[r] = 0;
+					return;
+				}
+			}
 			buf[i] = 0;
 			return;
 		}
