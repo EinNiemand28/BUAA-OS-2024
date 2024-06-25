@@ -78,6 +78,8 @@ int gettoken(char *s, char **p1) {
 }
 
 #define MAXARGS 128
+#define MAXLEN 1024
+char bf[MAXLEN];
 
 int parsecmd(char **argv, int *rightpipe) {
 	int argc = 0;
@@ -85,12 +87,57 @@ int parsecmd(char **argv, int *rightpipe) {
 		char *t;
 		int fd, r;
 		int c = gettoken(0, &t);
+		int p[2];
+		// debugf("token: %s\n", t);
 		switch (c) {
 		case 0:
 			return argc;
 		case '`':
 			if (backquote) {
-				// todo
+				if ((r = pipe(p)) < 0) {
+					debugf("failed to allocate a pipe: %d\n", r);
+					exit();
+				}
+				if ((*rightpipe = fork()) == 0) {
+					dup(p[1], 1);
+					close(p[1]);
+					close(p[0]);
+					return parsecmd(argv, rightpipe);
+				} else {
+					dup(p[0], 0);
+					close(p[0]);
+					close(p[1]);
+					debugf("hhh");
+					wait(*rightpipe);
+					debugf("hhh1");
+					char *tmp = (char *) bf;
+					debugf("hhh2");
+					read(0, tmp, MAXLEN);
+					debugf("arg: %s\n", tmp);
+					while (strchr("\t\r\n", *tmp)) {
+						*tmp++ = 0;
+					}
+					while (*tmp) {
+						char *s1 = tmp;
+						while (!strchr("\t\r\n", *tmp) && *tmp) {
+							tmp++;
+						}
+						*tmp++ = 0;
+						argv[argc++] = s1;
+						while (strchr("\t\r\n", *tmp) && *tmp) {
+							tmp++;
+						}
+					}
+					do {
+						c = gettoken(0, &t);
+						debugf("token: %c %s\n", c, t);
+					} while (c != '`');
+				}
+			} else {
+				for (int i = 0; i < argc; i++) {
+					debugf("%s\n", argv[i]);
+				}
+				return argc;
 			}
 			break;
 		case ';':
@@ -165,7 +212,7 @@ int parsecmd(char **argv, int *rightpipe) {
 			dup(fd, 1);
 			close(fd);
 			break;
-		case '|':;
+		case '|':
 			/*
 			 * First, allocate a pipe.
 			 * Then fork, set '*rightpipe' to the returned child envid or zero.
@@ -181,7 +228,6 @@ int parsecmd(char **argv, int *rightpipe) {
 			 * - close the read end of the pipe
 			 * - and 'return argc', to execute the left of the pipeline.
 			 */
-			int p[2];
 			/* Exercise 6.5: Your code here. (3/3) */
 
 			//user_panic("| not implemented");
@@ -219,7 +265,9 @@ void runcmd(char *s) {
 	argv[argc] = 0;
 
 	int child = spawn(argv[0], argv);
+	debugf("child: %d\nrightpipe: %d\n", child, rightpipe);
 	close_all();
+	debugf("executed");
 	if (child >= 0) {
 		wait(child);
 	} else {
@@ -228,6 +276,7 @@ void runcmd(char *s) {
 	if (rightpipe) {
 		wait(rightpipe);
 	}
+	debugf("exit\n");
 	exit();
 }
 
