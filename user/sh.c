@@ -80,6 +80,7 @@ int gettoken(char *s, char **p1) {
 #define MAXARGS 128
 #define MAXLEN 1024
 char bf[MAXLEN];
+int redirect;
 
 int parsecmd(char **argv, int *rightpipe) {
 	int argc = 0;
@@ -104,16 +105,21 @@ int parsecmd(char **argv, int *rightpipe) {
 					close(p[0]);
 					return parsecmd(argv, rightpipe);
 				} else {
+					//debugf("fork %08x to solve `\n", *rightpipe);
 					dup(p[0], 0);
 					close(p[0]);
 					close(p[1]);
-					debugf("hhh");
-					wait(*rightpipe);
-					debugf("hhh1");
+					// debugf("wait %08x\n", *rightpipe);
+					// wait(*rightpipe);
 					char *tmp = (char *) bf;
-					debugf("hhh2");
-					read(0, tmp, MAXLEN);
-					debugf("arg: %s\n", tmp);
+					for (int i = 0, count = 0; i < MAXLEN; i++) {
+						count += read(0, bf + i, 1);
+						if (count == i) break;
+						syscall_yield();
+					}
+					//debugf("hhh2\n");
+					// read(0, tmp, MAXLEN);
+					// debugf("arg: %s\n", tmp);
 					while (strchr("\t\r\n", *tmp)) {
 						*tmp++ = 0;
 					}
@@ -130,13 +136,13 @@ int parsecmd(char **argv, int *rightpipe) {
 					}
 					do {
 						c = gettoken(0, &t);
-						debugf("token: %c %s\n", c, t);
+						//debugf("token: %c %s\n", c, t);
 					} while (c != '`');
 				}
 			} else {
-				for (int i = 0; i < argc; i++) {
-					debugf("%s\n", argv[i]);
-				}
+				// for (int i = 0; i < argc; i++) {
+				// 	debugf("%s\n", argv[i]);
+				// }
 				return argc;
 			}
 			break;
@@ -144,11 +150,16 @@ int parsecmd(char **argv, int *rightpipe) {
 			if ((*rightpipe = fork()) == 0) {
 				return argc;
 			} else {
+				//debugf("fork %08x to solve ;\n", *rightpipe);
+				//debugf("wait %08x\n", *rightpipe);
 				wait(*rightpipe);
-				close(0);
-				close(1);
-				dup(opencons(), 1);
-				dup(1, 0);
+				if (redirect) {
+					close(0);
+					close(1);
+					dup(opencons(), 1);
+					dup(1, 0);
+					redirect = 0;
+				}
 				return parsecmd(argv, rightpipe);
 			}
 			break;
@@ -235,6 +246,7 @@ int parsecmd(char **argv, int *rightpipe) {
 				debugf("failed to allocate a pipe: %d\n", r);
 				exit();
 			}
+			redirect = 1;
 			if ((*rightpipe = fork()) == 0) {
 				dup(p[0], 0);
 				close(p[0]);
@@ -265,9 +277,9 @@ void runcmd(char *s) {
 	argv[argc] = 0;
 
 	int child = spawn(argv[0], argv);
-	debugf("child: %d\nrightpipe: %d\n", child, rightpipe);
+	// debugf("child: %08x\nrightpipe: %08x\n", child, rightpipe);
 	close_all();
-	debugf("executed");
+	// debugf("executed\n");
 	if (child >= 0) {
 		wait(child);
 	} else {
@@ -276,7 +288,7 @@ void runcmd(char *s) {
 	if (rightpipe) {
 		wait(rightpipe);
 	}
-	debugf("exit\n");
+	// debugf("exit\n");
 	exit();
 }
 
