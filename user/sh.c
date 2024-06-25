@@ -52,6 +52,16 @@ int _gettoken(char *s, char **p1, char **p2) {
 		if (t == '`') {
 			backquote ^= 1;
 		}
+		if (t == '&' && *s == '&') {
+			*s++ = 0;
+			*p2 = s;
+			return -1;
+		}
+		if (t == '|' && *s == '|') {
+			*s++ = 0;
+			*p2 = s;
+			return -2;
+		}
 		return t;
 	}
 
@@ -78,7 +88,7 @@ int gettoken(char *s, char **p1) {
 }
 
 #define MAXARGS 128
-#define MAXLEN 1024
+#define MAXLEN 2048
 char bf[MAXLEN];
 int redirect;
 
@@ -93,6 +103,12 @@ int parsecmd(char **argv, int *rightpipe) {
 		switch (c) {
 		case 0:
 			return argc;
+		case -1:
+
+			break;
+		case -2:
+
+			break;
 		case '`':
 			if (backquote) {
 				if ((r = pipe(p)) < 0) {
@@ -258,6 +274,8 @@ int parsecmd(char **argv, int *rightpipe) {
 				close(p[0]);
 				return argc;
 			}
+			break;
+		case '&':
 			break;
 		}
 	}

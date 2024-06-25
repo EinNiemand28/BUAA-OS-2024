@@ -130,6 +130,19 @@ int fsipc_remove(const char *path) {
 	return fsipc(FSREQ_REMOVE, req, 0, 0);
 }
 
+int fsipc_create(const char *path, int f_type) {
+	int len = strlen(path);
+	if (len == 0 || len > MAXPATHLEN) {
+		return -E_BAD_PATH;
+	}
+
+	struct Fsreq_create *req = (struct Fsreq_create *) fsipcbuf;
+	req->f_type = f_type;
+	strcpy((char *) req->req_path, path);
+
+	return fsipc(FSREQ_CREATE, req, 0, 0);
+}
+
 // Overview:
 //  Ask the file server to update the disk by writing any dirty
 //  blocks in the buffer cache.
