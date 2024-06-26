@@ -112,39 +112,39 @@ int parsecmd(char **argv, int *rightpipe) {
 		case '#':
 			return argc;
 		case -1: // And
-			if ((*rightpipe = fork()) == 0) {
-				return argc;
-			} else {
-				u_int who;
-				r = ipc_recv(&who, 0, 0);
-				if (r) {
-					do {
-						c = gettoken(0, &t);
-					} while (c != -2 && c != '#' && c);
-					if (c != -2) {
-						return 0;
-					}
-				}
-				return parsecmd(argv, rightpipe);
-			}
+			// if ((*rightpipe = fork()) == 0) {
+			// 	return argc;
+			// } else {
+			// 	u_int who;
+			// 	r = ipc_recv(&who, 0, 0);
+			// 	if (r) {
+			// 		do {
+			// 			c = gettoken(0, &t);
+			// 		} while (c != -2 && c != '#' && c);
+			// 		if (c != -2) {
+			// 			return 0;
+			// 		}
+			// 	}
+			// 	return parsecmd(argv, rightpipe);
+			// }
 			break;
 		case -2: // Or
-			if ((*rightpipe = fork()) == 0) {
-				return argc;
-			} else {
-				u_int who;
-				r = ipc_recv(&who, 0, 0);
-				//debugf("%d %d %d\n", *rightpipe, who, r);
-				if (r == 0) {
-					do {
-						c = gettoken(0, &t);
-					} while (c != -1 && c != '#' && c);
-					if (c != -1) {
-						return 0;
-					}
-				}
-				return parsecmd(argv, rightpipe);
-			}
+			// if ((*rightpipe = fork()) == 0) {
+			// 	return argc;
+			// } else {
+			// 	u_int who;
+			// 	r = ipc_recv(&who, 0, 0);
+			// 	//debugf("%d %d %d\n", *rightpipe, who, r);
+			// 	if (r == 0) {
+			// 		do {
+			// 			c = gettoken(0, &t);
+			// 		} while (c != -1 && c != '#' && c);
+			// 		if (c != -1) {
+			// 			return 0;
+			// 		}
+			// 	}
+			// 	return parsecmd(argv, rightpipe);
+			// }
 			break;
 		case '`':
 			if (backquote) {
