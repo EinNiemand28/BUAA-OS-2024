@@ -3,7 +3,7 @@
 int rmod, fmod;
 void usage(void) {
     printf("usage: remove [-rf] [file..]\n");
-    exit();
+    exit(1);
 }
 int main(int argc, char **argv) {
     ARGBEGIN {

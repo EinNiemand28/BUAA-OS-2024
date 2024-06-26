@@ -92,6 +92,13 @@ int gettoken(char *s, char **p1) {
 char bf[MAXLEN];
 int redirect;
 
+int jobscount;
+struct Job {
+	int status;
+	int env_id;
+	char cmd[1024];
+} jobs[20];
+
 int parsecmd(char **argv, int *rightpipe) {
 	int argc = 0;
 	while (1) {
@@ -104,17 +111,46 @@ int parsecmd(char **argv, int *rightpipe) {
 		case 0:
 		case '#':
 			return argc;
-		case -1:
-
+		case -1: // And
+			if ((*rightpipe = fork()) == 0) {
+				return argc;
+			} else {
+				u_int who;
+				r = ipc_recv(&who, 0, 0);
+				if (r) {
+					do {
+						c = gettoken(0, &t);
+					} while (c != -2 && c != '#' && c);
+					if (c != -2) {
+						return 0;
+					}
+				}
+				return parsecmd(argv, rightpipe);
+			}
 			break;
-		case -2:
-
+		case -2: // Or
+			if ((*rightpipe = fork()) == 0) {
+				return argc;
+			} else {
+				u_int who;
+				r = ipc_recv(&who, 0, 0);
+				//debugf("%d %d %d\n", *rightpipe, who, r);
+				if (r == 0) {
+					do {
+						c = gettoken(0, &t);
+					} while (c != -1 && c != '#' && c);
+					if (c != -1) {
+						return 0;
+					}
+				}
+				return parsecmd(argv, rightpipe);
+			}
 			break;
 		case '`':
 			if (backquote) {
 				if ((r = pipe(p)) < 0) {
 					debugf("failed to allocate a pipe: %d\n", r);
-					exit();
+					exit(1);
 				}
 				if ((*rightpipe = fork()) == 0) {
 					dup(p[1], 1);
@@ -183,14 +219,14 @@ int parsecmd(char **argv, int *rightpipe) {
 		case 'w':
 			if (argc >= MAXARGS) {
 				debugf("too many arguments\n");
-				exit();
+				exit(1);
 			}
 			argv[argc++] = t;
 			break;
 		case '<':
 			if (gettoken(0, &t) != 'w') {
 				debugf("syntax error: < not followed by word\n");
-				exit();
+				exit(1);
 			}
 			// Open 't' for reading, dup it onto fd 0, and then close the original fd.
 			// If the 'open' function encounters an error,
@@ -201,7 +237,7 @@ int parsecmd(char **argv, int *rightpipe) {
 			//user_panic("< redirection not implemented");
 			if ((r = open(t, O_RDONLY)) < 0) {
 				debugf("failed to open \'%s\': %d\n", t, r);
-				exit();
+				exit(1);
 			}
 			fd = r;
 			dup(fd, 0);
@@ -214,13 +250,13 @@ int parsecmd(char **argv, int *rightpipe) {
 				mode |= O_APPEND;
 				if ((cc = gettoken(0, &t)) != 'w') {
 					debugf("syntax error: > not followed by word\n");
-					exit();
+					exit(1);
 				}
 			} else if (cc == 'w') {
 				mode |= O_TRUNC;
 			} else {
 				debugf("syntax error: > not followed by word\n");
-				exit();
+				exit(1);
 			}
 			//debugf("%d\n", mode & O_APPEND);
 
@@ -234,7 +270,7 @@ int parsecmd(char **argv, int *rightpipe) {
 			//user_panic("> redirection not implemented");
 			if ((r = open(t, mode)) < 0) {
 				debugf("failed to open \'%s\': %d\n", t, r);
-				exit();
+				exit(1);
 			}
 			fd = r;
 			dup(fd, 1);
@@ -261,7 +297,7 @@ int parsecmd(char **argv, int *rightpipe) {
 			//user_panic("| not implemented");
 			if ((r = pipe(p)) < 0) {
 				debugf("failed to allocate a pipe: %d\n", r);
-				exit();
+				exit(1);
 			}
 			redirect = 1;
 			if ((*rightpipe = fork()) == 0) {
@@ -387,7 +423,7 @@ void readline(char *buf, u_int n) {
 			if (r < 0) {
 				debugf("read error: %d\n", r);
 			}
-			exit();
+			exit(1);
 		}
 		if (tmp == '\b' || tmp == 0x7f) {
 		//  backspace         delete
@@ -505,7 +541,8 @@ void runcmd(char *s) {
 	gettoken(s, 0);
 
 	char *argv[MAXARGS];
-	int rightpipe = 0;
+	int rightpipe = 0, r;
+	u_int who;
 	int argc = parsecmd(argv, &rightpipe);
 	if (argc == 0) {
 		return;
@@ -517,13 +554,13 @@ void runcmd(char *s) {
 		argv[1] = ".mosh_history";
 		argc = 2;
 	}
-	
+
 	int child = spawn(argv[0], argv);
 	// debugf("child: %08x\nrightpipe: %08x\n", child, rightpipe);
 	close_all();
 	// debugf("executed\n");
 	if (child >= 0) {
-		wait(child);
+		r = ipc_recv(&who, 0, 0);
 	} else {
 		debugf("spawn %s: %d\n", argv[0], child);
 	}
@@ -532,14 +569,14 @@ void runcmd(char *s) {
 		wait(rightpipe);
 	}
 	// debugf("exit\n");
-	exit();
+	exit(r);
 }
 
 char buf[1024];
 
 void usage(void) {
 	printf("usage: sh [-ix] [script-file]\n");
-	exit();
+	exit(1);
 }
 
 int main(int argc, char **argv) {
@@ -597,14 +634,14 @@ int main(int argc, char **argv) {
 		}
 		if (r == 0) {
 			runcmd(buf);
-			exit();
+			exit(0);
 		} else {
 			wait(r);
 		}
-		debugf("hislen: %d\n", hislen);
-		for (int i = 0; i < hislen; i++) {
-			debugf("%2d: %d\n", i, hisoffset[i]);
-		}
+		// debugf("hislen: %d\n", hislen);
+		// for (int i = 0; i < hislen; i++) {
+		// 	debugf("%2d: %d\n", i, hisoffset[i]);
+		// }
 	}
 	return 0;
 }

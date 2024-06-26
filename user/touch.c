@@ -2,7 +2,7 @@
 
 void usage(void) {
     printf("usage: touch [file..]\n");
-        exit();
+    exit(1);
 }
 int main(int argc, char **argv) {
     if (argc != 2) {
