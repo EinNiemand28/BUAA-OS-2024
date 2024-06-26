@@ -541,7 +541,7 @@ void runcmd(char *s) {
 	gettoken(s, 0);
 
 	char *argv[MAXARGS];
-	int rightpipe = 0, r;
+	int rightpipe = 0, r = 0;
 	u_int who;
 	int argc = parsecmd(argv, &rightpipe);
 	if (argc == 0) {
@@ -560,8 +560,8 @@ void runcmd(char *s) {
 	close_all();
 	// debugf("executed\n");
 	if (child >= 0) {
-		wait(child);
-		//r = ipc_recv(&who, 0, 0);
+		//wait(child);
+		r = ipc_recv(&who, 0, 0);
 	} else {
 		debugf("spawn %s: %d\n", argv[0], child);
 	}
@@ -570,7 +570,7 @@ void runcmd(char *s) {
 		wait(rightpipe);
 	}
 	// debugf("exit\n");
-	exit(0);
+	exit(r);
 }
 
 char buf[1024];
