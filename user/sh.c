@@ -2,7 +2,7 @@
 #include <lib.h>
 
 #define WHITESPACE " \t\r\n"
-#define SYMBOLS "<|>&;()`"
+#define SYMBOLS "<|>&;()`#"
 
 /* Overview:
  *   Parse the next token from the string at s.
@@ -102,6 +102,7 @@ int parsecmd(char **argv, int *rightpipe) {
 		// debugf("token: %s\n", t);
 		switch (c) {
 		case 0:
+		case '#':
 			return argc;
 		case -1:
 
@@ -283,6 +284,223 @@ int parsecmd(char **argv, int *rightpipe) {
 	return argc;
 }
 
+#define HISTFILESIZE 20
+
+#define MoveLeft(x) debugf("\033[%dD", x)
+#define MoveRight(x) debugf("\033[%dC", x)
+#define MoveUp(x) debugf("\033[%dA", x)
+#define Movedown(x) debugf("\033[%dB", x)
+char histmp[1024], buftmp[1024 * HISTFILESIZE];
+int hislen, hisoffset[HISTFILESIZE + 5];
+
+void readHistory(int line, char *buf) {
+	int r, fd;
+	if ((fd = open("/.mosh_history", O_RDONLY)) < 0) {
+		user_panic("open failed");
+	}
+	if (line >= hislen) {
+		*buf = 0;
+		return;
+	}
+	int offset = (line > 0 ? hisoffset[line - 1] : 0);
+	int len = (line > 0 ? hisoffset[line] - hisoffset[line - 1] : hisoffset[line]);
+	if ((r = seek(fd, offset)) < 0) {
+		user_panic("seek failed");
+	}
+	if ((r = read(fd, buf, len)) != len) {
+		user_panic("read failed");
+	}
+	close(fd);
+	buf[len - 1] = 0;
+}
+
+void saveHistory(char *buf) {
+	int r, fd;
+	if (hislen < HISTFILESIZE) {
+		if ((fd = open("/.mosh_history", O_WRONLY | O_APPEND)) < 0) {
+			user_panic("open failed");
+		}
+		int len = strlen(buf);
+		*(buf + len) = '\n';
+		len += 1;
+		*(buf + len) = 0;
+		if ((r = write(fd, buf, len)) != len) {
+			user_panic("write error");
+		}
+		hisoffset[hislen++] = len + (hislen > 0 ? hisoffset[hislen - 1] : 0);
+		close(fd);
+	} else {
+		if ((fd = open("/.mosh_history", O_RDONLY)) < 0) {
+			user_panic("open failed");
+		}
+		if ((r = seek(fd, hisoffset[0])) < 0) {
+			user_panic("seek failed");
+		}
+		int len = hisoffset[HISTFILESIZE - 1] - hisoffset[0];
+		if ((r = read(fd, buftmp, len)) != len) {
+			user_panic("read error");
+		}
+		if ((fd = open("/.mosh_history", O_TRUNC | O_WRONLY)) < 0) {
+			user_panic("trunc failed");
+		}
+		if ((r = write(fd, buftmp, len)) != len) {
+			debugf("%s\n", buftmp);
+			debugf("%d %d\n", len, r);
+			user_panic("rewrite error");
+		}
+		if ((fd = open("/.mosh_history", O_WRONLY | O_APPEND)) < 0) {
+			user_panic("rewrite not correctly");
+		}
+		len = strlen(buf);
+		*(buf + len) = '\n';
+		len += 1;
+		*(buf + len) = 0;
+		if ((r = write(fd, buf, len)) != len) {
+			user_panic("write error");
+		}
+		int ttmp = hisoffset[0];
+		for (int i = 0; i < HISTFILESIZE; i++) {
+			hisoffset[i] = hisoffset[i + 1] - ttmp;
+		}
+		hisoffset[hislen - 1] = hisoffset[hislen - 2] + len;
+		close(fd);
+	}
+}
+
+void deleteLine(int pos, int len) {
+	if (pos != 0) {
+		MoveLeft(pos);
+	}
+	for (int k = 0; k < len; ++k) {
+		debugf(" ");
+	}
+	if (len != 0) {
+		MoveLeft(len);
+	}
+}
+
+void readline(char *buf, u_int n) {
+	int r, len = 0, i = 0, hisline = hislen;
+	char tmp;
+	while (i < n) {
+		if ((r = read(0, &tmp, 1)) != 1) {
+			if (r < 0) {
+				debugf("read error: %d\n", r);
+			}
+			exit();
+		}
+		if (tmp == '\b' || tmp == 0x7f) {
+		//  backspace         delete
+			if (i > 0) {
+				if (i == len) {
+					buf[--i] = 0;
+					MoveLeft(1);
+					debugf(" ");
+					MoveLeft(1);
+				} else {
+					for (int j = i - 1; j < len - 1; ++j) {
+						buf[j] = buf[j + 1];
+					}
+					buf[len - 1] = 0;
+					MoveLeft(i--);
+					debugf("%s ", buf);
+					MoveLeft(len - i);
+				}
+				len -= 1;
+			}
+		} else if (tmp == '~') {
+			if (i < len) {
+				for (int j = i; j < len; ++j) {
+					buf[j] = buf[j + 1];
+				}
+				buf[--len] = 0;
+				if (i != 0) {
+					MoveLeft(i);
+				}
+				debugf("%s ", buf);
+				MoveLeft(len - i + 1);
+			}
+		} else if (tmp == '\033') {
+			read(0, &tmp, 1);
+			if (tmp == '[') {
+				read(0, &tmp, 1);
+				switch (tmp) {
+					case 'A':
+						Movedown(1);
+						if (hisline == hislen) {
+							strcpy(histmp, buf);
+							*(histmp + len) = 0;
+						}
+						if (hisline > 0) {
+							hisline--;
+							readHistory(hisline, buf);
+							deleteLine(i, len);
+							debugf("%s", buf);
+							len = strlen(buf);
+							i = len;
+						}
+						break;
+					case 'B':
+						//MoveUp(1);
+						if (hisline < hislen - 1) {
+							hisline++;
+							readHistory(hisline, buf);
+						} else if (hisline + 1 == hislen) {
+							hisline++;
+							strcpy(buf, histmp);
+						}
+						deleteLine(i, len);
+						debugf("%s", buf);
+						len = strlen(buf);
+						*(buf + len) = 0;
+						i = len;
+						break;
+					case 'C':
+						if (i < len) {
+							i += 1;
+						} else {
+							MoveLeft(1);
+						}
+						break;
+					case 'D':
+						if (i > 0) {
+							i -= 1;
+						} else {
+							MoveRight(1);
+						}
+						break;
+					default:
+						break;
+				}
+			}
+		} else if (tmp == '\r' || tmp == '\n') {
+			buf[len] = 0;
+			return;
+		} else {
+			if (i == len) {
+				buf[i++] = tmp;
+			} else {
+				for (int j = len; j > i; j--) {
+					buf[j] = buf[j - 1];
+				}
+				buf[i] = tmp;
+				buf[len + 1] = 0;
+				MoveLeft(++i);
+				debugf("%s", buf);
+				MoveLeft(len - i + 1);
+			}
+			len += 1;
+		}
+
+		if (len >= n) break;
+	}
+	debugf("line too long\n");
+	while ((r = read(0, buf, 1)) == 1 && buf[0] != '\r' && buf[0] != '\n') {
+		;
+	}
+	buf[0] = 0;
+}
+
 void runcmd(char *s) {
 	gettoken(s, 0);
 
@@ -294,6 +512,12 @@ void runcmd(char *s) {
 	}
 	argv[argc] = 0;
 
+	if (!strcmp(argv[0], "history") || !strcmp(argv[0], "history.b")) {
+		argv[0] = "cat";
+		argv[1] = ".mosh_history";
+		argc = 2;
+	}
+	
 	int child = spawn(argv[0], argv);
 	// debugf("child: %08x\nrightpipe: %08x\n", child, rightpipe);
 	close_all();
@@ -303,49 +527,12 @@ void runcmd(char *s) {
 	} else {
 		debugf("spawn %s: %d\n", argv[0], child);
 	}
+
 	if (rightpipe) {
 		wait(rightpipe);
 	}
 	// debugf("exit\n");
 	exit();
-}
-
-void readline(char *buf, u_int n) {
-	int r;
-	for (int i = 0; i < n; i++) {
-		if ((r = read(0, buf + i, 1)) != 1) {
-			if (r < 0) {
-				debugf("read error: %d\n", r);
-			}
-			exit();
-		}
-		if (buf[i] == '\b' || buf[i] == 0x7f) {
-		//  backspace         delete
-			if (i > 0) {
-				i -= 2;
-			} else {
-				i = -1;
-			}
-			if (buf[i] != '\b') {
-				printf("\b");
-			}
-		}
-		if (buf[i] == '\r' || buf[i] == '\n') {
-			for (r = 0; buf[r]; r++) {
-				if (buf[r] == '#') {
-					buf[r] = 0;
-					return;
-				}
-			}
-			buf[i] = 0;
-			return;
-		}
-	}
-	debugf("line too long\n");
-	while ((r = read(0, buf, 1)) == 1 && buf[0] != '\r' && buf[0] != '\n') {
-		;
-	}
-	buf[0] = 0;
 }
 
 char buf[1024];
@@ -386,12 +573,19 @@ int main(int argc, char **argv) {
 		}
 		user_assert(r == 0);
 	}
+	if ((r = open("/.mosh_history", O_RDONLY)) < 0) {
+		if (create("/.mosh_history", FTYPE_REG) < 0) {
+			user_panic("create failed");
+		}
+	} else {
+		close(r);
+	}
 	for (;;) {
 		if (interactive) {
 			printf("\n$ ");
 		}
 		readline(buf, sizeof buf);
-
+		saveHistory(buf);
 		if (buf[0] == '#') {
 			continue;
 		}
@@ -406,6 +600,10 @@ int main(int argc, char **argv) {
 			exit();
 		} else {
 			wait(r);
+		}
+		debugf("hislen: %d\n", hislen);
+		for (int i = 0; i < hislen; i++) {
+			debugf("%2d: %d\n", i, hisoffset[i]);
 		}
 	}
 	return 0;
