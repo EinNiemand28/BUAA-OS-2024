@@ -10,7 +10,7 @@ void exit(int r) {
 	close_all();
 #endif
 	env = &envs[ENVX(syscall_getenvid())];
-	if (envs[ENVX(env->env_parent_id)].env_ipc_recving != 0) {
+	if (envs[ENVX(env->env_parent_id)].env_ipc_recving != 0 && env->env_parent_id == envs[ENVX(env->env_parent_id)].env_id && envs[ENVX(env->env_parent_id)].env_status != ENV_FREE) {
 		//debugf("%d should send: %d\n", env->env_id, r);
 		ipc_send(env->env_parent_id, r, 0, 0);
 	}

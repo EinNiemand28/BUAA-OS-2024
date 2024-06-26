@@ -1,5 +1,6 @@
 #include <args.h>
 #include <lib.h>
+#include <env.h>
 
 #define WHITESPACE " \t\r\n"
 #define SYMBOLS "<|>&;()`#"
@@ -91,13 +92,6 @@ int gettoken(char *s, char **p1) {
 #define MAXLEN 2048
 char bf[MAXLEN];
 int redirect;
-
-int jobscount;
-struct Job {
-	int status;
-	int env_id;
-	char cmd[1024];
-} jobs[20];
 
 int parsecmd(char **argv, int *rightpipe, int *background) {
 	int argc = 0;
@@ -541,13 +535,34 @@ void readline(char *buf, u_int n) {
 int atoi(char *s) {
     int ret = 0;
     while (*s) {
-        ret = ret * (*s++ - '0');
+        ret = ret * 10 + (*s++ - '0');
     }
     return ret;
 }
 
-void runcmd(char *s) {
+char cmd[1024];
+int jobscount;
+struct Job {
+	int status;
+	int env_id;
 	char cmd[1024];
+} jobs[20];
+
+int savetask(char *s) {
+	strcpy(cmd, s);
+	int len = strlen(s);
+	while (s[len - 1] != '&' && len > 1) {
+		len--;
+	}
+	if (s[len - 1] == '&') {
+		strcpy(jobs[++jobscount].cmd, cmd);
+		jobs[jobscount].status = 1;
+		return 1;
+	}
+	return 0;
+}
+
+int runcmd(char *s) {
 	strcpy(cmd, s);
 	gettoken(s, 0);
 
@@ -555,7 +570,7 @@ void runcmd(char *s) {
 	int rightpipe = 0, r = 0, background = 0;
 	int argc = parsecmd(argv, &rightpipe, &background);
 	if (argc == 0) {
-		return;
+		return 0;
 	}
 	argv[argc] = 0;
 
@@ -566,55 +581,35 @@ void runcmd(char *s) {
 	}
 
 	if (!strcmp(argv[0], "jobs")) {
-		for (int i = 1; i <= jobscount; i++) {
-			printf("[%d] %-10s 0x%08x %s\n", i, jobs[i].status ? "Running" : "Done", jobs[i].env_id, jobs[i].cmd);
-		}
-		exit(0);
+		return -1;
 	}
 
 	if (!strcmp(argv[0], "kill")) {
-		int jobid = atoi(argv[1]);
-		if (jobs[jobid].status) {
-			syscall_env_destroy(jobs[jobid].env_id);
-			jobs[jobid].status = 0;
-		}
-		exit(0);
+		return atoi(argv[1]);
 	}
 
 	if (!strcmp(argv[0], "fg")) {
 		int jobid = atoi(argv[1]);
-		r = wait(jobs[jobid].env_id);
-		jobs[jobid].status = 0;
-		exit(r);
+		check2(jobs[jobid].env_id);
+		return 0;
 	}
 
 	int child = spawn(argv[0], argv);
-
-	// debugf("%d\n", background);
-	// for (int i = 0; i < argc; i++) {
-	// 	debugf("%s ", argv[i]);
-	// }
-	// debugf("\n");
 	// debugf("child: %08x\nrightpipe: %08x\n", child, rightpipe);
 	close_all();
 	// debugf("executed\n");
 	if (child >= 0) {
 		if (background) {
 			r = 0;
-			jobs[++jobscount].env_id = child;
-			strcpy(jobs[jobscount].cmd, cmd);
-			jobs[jobscount].status = 1;
 		} else {
 			r = wait(child);
-			debugf("hhh\n");
-			for (int i = 1; i <= jobscount; i++) {
-				if (jobs[i].env_id == child) {
-					jobs[i].status = 0;
-				}
-			}
 		}
 	} else {
 		debugf("spawn %s: %d\n", argv[0], child);
+	}
+
+	if (background) {
+		return child;
 	}
 
 	if (rightpipe) {
@@ -675,6 +670,7 @@ int main(int argc, char **argv) {
 		}
 		readline(buf, sizeof buf);
 		saveHistory(buf);
+		int rr = savetask(buf);
 		if (buf[0] == '#') {
 			continue;
 		}
@@ -684,16 +680,33 @@ int main(int argc, char **argv) {
 		if ((r = fork()) < 0) {
 			user_panic("fork: %d", r);
 		}
+		int ret = 0;
 		if (r == 0) {
-			runcmd(buf);
-			exit(0);
+			exit(runcmd(buf));
 		} else {
-			wait(r);
+			ret = wait(r);
 		}
-		// debugf("hislen: %d\n", hislen);
-		// for (int i = 0; i < hislen; i++) {
-		// 	debugf("%2d: %d\n", i, hisoffset[i]);
-		// }
+		for (int i = 1; i <= jobscount; i++) {
+			if (jobs[i].status) {
+				if (check(jobs[i].env_id)) {
+					jobs[i].status = 0;
+				}
+			}
+		}
+		if (ret) {
+			if (rr) {
+				jobs[jobscount].env_id = ret;
+			} else if (ret == -1) {
+				for (int i = 1; i <= jobscount; i++) {
+					debugf("[%d] %-10s 0x%08x %s\n", i, jobs[i].status ? "Running" : "Done", jobs[i].env_id, jobs[i].cmd);
+				}
+			} else if (ret < 30) {
+				if (jobs[ret].status) {
+					syscall_env_destroy(jobs[ret].env_id);
+					jobs[ret].status = 0;
+				}
+			}
+		}
 	}
 	return 0;
 }

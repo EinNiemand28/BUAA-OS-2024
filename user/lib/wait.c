@@ -12,3 +12,20 @@ int wait(u_int envid) {
 	}
 	return r;
 }
+
+int check(u_int envid) {
+	const volatile struct Env *e;
+	e = &envs[ENVX(envid)];
+	if (e->env_status == ENV_FREE) {
+		return 1;
+	}
+	return 0;
+}
+
+void check2(u_int envid) {
+	const volatile struct Env *e;
+	e = &envs[ENVX(envid)];
+	while (e->env_id == envid && e->env_status != ENV_FREE) {
+		syscall_yield();
+	}
+}
