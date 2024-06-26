@@ -702,7 +702,7 @@ int main(int argc, char **argv) {
 				}
 			} else if (ret < 30) {
 				if (jobs[ret].status) {
-					syscall_env_destroy(jobs[ret].env_id);
+					syscall_set_env_status(jobs[ret].env_id, ENV_NOT_RUNNABLE);
 					jobs[ret].status = 0;
 				}
 			}
