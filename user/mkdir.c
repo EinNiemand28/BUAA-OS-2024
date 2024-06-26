@@ -39,6 +39,7 @@ int main(int argc, char **argv) {
             } else {
                 printf("mkdir: cannot create directory \'%s\': No such file or directory\n", argv[0]);
             }
+            return 1;
         }
     }
 

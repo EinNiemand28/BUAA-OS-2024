@@ -27,10 +27,12 @@ int main(int argc, char **argv) {
         } else {
             if (fd < 0) {
                 printf("rm: cannot remove \'%s\': No such file or directory\n", argv[0]);
+                return 1;
             } else {
                 struct Filefd *filefd = (struct Filefd *) INDEX2FD(fd);
                 if (!rmod && filefd->f_file.f_type == FTYPE_DIR) {
                     printf("rm: cannot remove \'%s\': Is a directory\n", argv[0]);
+                    return 1;
                 } else {
                     remove(argv[0]);
                 }

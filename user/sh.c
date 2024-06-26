@@ -120,8 +120,8 @@ int parsecmd(char **argv, int *rightpipe) {
 				if (r) {
 					do {
 						c = gettoken(0, &t);
-					} while (c != -2 && c != '#' && c);
-					if (c != -2) {
+					} while (c != -2 && c != '#' && c != ';' && c);
+					if (c != -2 || c != ';') {
 						return 0;
 					}
 				}
@@ -138,8 +138,8 @@ int parsecmd(char **argv, int *rightpipe) {
 				if (r == 0) {
 					do {
 						c = gettoken(0, &t);
-					} while (c != -1 && c != '#' && c);
-					if (c != -1) {
+					} while (c != -1 && c != '#' && c != ';' && c);
+					if (c != -1 || c != ';') {
 						return 0;
 					}
 				}
