@@ -3,7 +3,7 @@
 int pmod;
 void usage(void) {
     printf("usage: mkdir [-p] [dir..]\n");
-    exit(1);
+    exit(0);
 }
 int main(int argc, char **argv) {
     ARGBEGIN {
@@ -39,7 +39,6 @@ int main(int argc, char **argv) {
             } else {
                 printf("mkdir: cannot create directory \'%s\': No such file or directory\n", argv[0]);
             }
-            return 1;
         }
     }
 

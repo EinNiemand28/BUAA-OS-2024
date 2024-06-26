@@ -120,8 +120,8 @@ int parsecmd(char **argv, int *rightpipe) {
 				if (r) {
 					do {
 						c = gettoken(0, &t);
-					} while (c != -2 && c != '#' && c != ';' && c);
-					if (c != -2 || c != ';') {
+					} while (c != -2 && c != '#' && c);
+					if (c != -2) {
 						return 0;
 					}
 				}
@@ -138,8 +138,8 @@ int parsecmd(char **argv, int *rightpipe) {
 				if (r == 0) {
 					do {
 						c = gettoken(0, &t);
-					} while (c != -1 && c != '#' && c != ';' && c);
-					if (c != -1 || c != ';') {
+					} while (c != -1 && c != '#' && c);
+					if (c != -1) {
 						return 0;
 					}
 				}
@@ -150,7 +150,7 @@ int parsecmd(char **argv, int *rightpipe) {
 			if (backquote) {
 				if ((r = pipe(p)) < 0) {
 					debugf("failed to allocate a pipe: %d\n", r);
-					exit(1);
+					exit(0);
 				}
 				if ((*rightpipe = fork()) == 0) {
 					dup(p[1], 1);
@@ -219,14 +219,14 @@ int parsecmd(char **argv, int *rightpipe) {
 		case 'w':
 			if (argc >= MAXARGS) {
 				debugf("too many arguments\n");
-				exit(1);
+				exit(0);
 			}
 			argv[argc++] = t;
 			break;
 		case '<':
 			if (gettoken(0, &t) != 'w') {
 				debugf("syntax error: < not followed by word\n");
-				exit(1);
+				exit(0);
 			}
 			// Open 't' for reading, dup it onto fd 0, and then close the original fd.
 			// If the 'open' function encounters an error,
@@ -237,7 +237,7 @@ int parsecmd(char **argv, int *rightpipe) {
 			//user_panic("< redirection not implemented");
 			if ((r = open(t, O_RDONLY)) < 0) {
 				debugf("failed to open \'%s\': %d\n", t, r);
-				exit(1);
+				exit(0);
 			}
 			fd = r;
 			dup(fd, 0);
@@ -250,13 +250,13 @@ int parsecmd(char **argv, int *rightpipe) {
 				mode |= O_APPEND;
 				if ((cc = gettoken(0, &t)) != 'w') {
 					debugf("syntax error: > not followed by word\n");
-					exit(1);
+					exit(0);
 				}
 			} else if (cc == 'w') {
 				mode |= O_TRUNC;
 			} else {
 				debugf("syntax error: > not followed by word\n");
-				exit(1);
+				exit(0);
 			}
 			//debugf("%d\n", mode & O_APPEND);
 
@@ -270,7 +270,7 @@ int parsecmd(char **argv, int *rightpipe) {
 			//user_panic("> redirection not implemented");
 			if ((r = open(t, mode)) < 0) {
 				debugf("failed to open \'%s\': %d\n", t, r);
-				exit(1);
+				exit(0);
 			}
 			fd = r;
 			dup(fd, 1);
@@ -297,7 +297,7 @@ int parsecmd(char **argv, int *rightpipe) {
 			//user_panic("| not implemented");
 			if ((r = pipe(p)) < 0) {
 				debugf("failed to allocate a pipe: %d\n", r);
-				exit(1);
+				exit(0);
 			}
 			redirect = 1;
 			if ((*rightpipe = fork()) == 0) {
@@ -423,7 +423,7 @@ void readline(char *buf, u_int n) {
 			if (r < 0) {
 				debugf("read error: %d\n", r);
 			}
-			exit(1);
+			exit(0);
 		}
 		if (tmp == '\b' || tmp == 0x7f) {
 		//  backspace         delete
@@ -576,7 +576,7 @@ char buf[1024];
 
 void usage(void) {
 	printf("usage: sh [-ix] [script-file]\n");
-	exit(1);
+	exit(0);
 }
 
 int main(int argc, char **argv) {
