@@ -595,7 +595,7 @@ int runcmd(char *s) {
 			return 0;
 		}
 		if (jobs[jobid].status == 0) {
-			debugf("fg: (0x%08x) not running\n", jobid);
+			debugf("fg: (0x%08x) not running\n", jobs[jobid].env_id);
 			return 0;
 		}
 		check2(jobs[jobid].env_id);
@@ -713,7 +713,7 @@ int main(int argc, char **argv) {
 					syscall_set_env_status(jobs[ret].env_id, ENV_NOT_RUNNABLE);
 					jobs[ret].status = 0;
 				} else {
-					debugf("fg: (0x%08x) not running\n", ret);
+					debugf("fg: (0x%08x) not running\n", jobs[ret].env_id);
 				}
 			} else {
 				debugf("fg: job (%d) do not exist\n", ret);
