@@ -99,7 +99,7 @@ struct Job {
 	char cmd[1024];
 } jobs[20];
 
-int parsecmd(char **argv, int *rightpipe) {
+int parsecmd(char **argv, int *rightpipe, int *background) {
 	int argc = 0;
 	while (1) {
 		char *t;
@@ -125,7 +125,7 @@ int parsecmd(char **argv, int *rightpipe) {
 						return 0;
 					}
 				}
-				return parsecmd(argv, rightpipe);
+				return parsecmd(argv, rightpipe, background);
 			}
 			break;
 		case -2: // Or
@@ -143,7 +143,7 @@ int parsecmd(char **argv, int *rightpipe) {
 						return 0;
 					}
 				}
-				return parsecmd(argv, rightpipe);
+				return parsecmd(argv, rightpipe, background);
 			}
 			break;
 		case '`':
@@ -156,7 +156,7 @@ int parsecmd(char **argv, int *rightpipe) {
 					dup(p[1], 1);
 					close(p[1]);
 					close(p[0]);
-					return parsecmd(argv, rightpipe);
+					return parsecmd(argv, rightpipe, background);
 				} else {
 					//debugf("fork %08x to solve `\n", *rightpipe);
 					dup(p[0], 0);
@@ -213,7 +213,7 @@ int parsecmd(char **argv, int *rightpipe) {
 					dup(1, 0);
 					redirect = 0;
 				}
-				return parsecmd(argv, rightpipe);
+				return parsecmd(argv, rightpipe, background);
 			}
 			break;
 		case 'w':
@@ -304,7 +304,7 @@ int parsecmd(char **argv, int *rightpipe) {
 				dup(p[0], 0);
 				close(p[0]);
 				close(p[1]);
-				return parsecmd(argv, rightpipe);
+				return parsecmd(argv, rightpipe, background);
 			} else {
 				dup(p[1], 1);
 				close(p[1]);
@@ -313,6 +313,7 @@ int parsecmd(char **argv, int *rightpipe) {
 			}
 			break;
 		case '&':
+			*background = 1;
 			break;
 		}
 	}
@@ -537,13 +538,22 @@ void readline(char *buf, u_int n) {
 	buf[0] = 0;
 }
 
+int atoi(char *s) {
+    int ret = 0;
+    while (*s) {
+        ret = ret * (*s++ - '0');
+    }
+    return ret;
+}
+
 void runcmd(char *s) {
+	char cmd[1024];
+	strcpy(cmd, s);
 	gettoken(s, 0);
 
 	char *argv[MAXARGS];
-	int rightpipe = 0, r = 0;
-	u_int who;
-	int argc = parsecmd(argv, &rightpipe);
+	int rightpipe = 0, r = 0, background = 0;
+	int argc = parsecmd(argv, &rightpipe, &background);
 	if (argc == 0) {
 		return;
 	}
@@ -555,12 +565,54 @@ void runcmd(char *s) {
 		argc = 2;
 	}
 
+	if (!strcmp(argv[0], "jobs")) {
+		for (int i = 1; i <= jobscount; i++) {
+			printf("[%d] %-10s 0x%08x %s\n", i, jobs[i].status ? "Running" : "Done", jobs[i].env_id, jobs[i].cmd);
+		}
+		exit(0);
+	}
+
+	if (!strcmp(argv[0], "kill")) {
+		int jobid = atoi(argv[1]);
+		if (jobs[jobid].status) {
+			syscall_env_destroy(jobs[jobid].env_id);
+			jobs[jobid].status = 0;
+		}
+		exit(0);
+	}
+
+	if (!strcmp(argv[0], "fg")) {
+		int jobid = atoi(argv[1]);
+		r = wait(jobs[jobid].env_id);
+		jobs[jobid].status = 0;
+		exit(r);
+	}
+
 	int child = spawn(argv[0], argv);
+
+	// debugf("%d\n", background);
+	// for (int i = 0; i < argc; i++) {
+	// 	debugf("%s ", argv[i]);
+	// }
+	// debugf("\n");
 	// debugf("child: %08x\nrightpipe: %08x\n", child, rightpipe);
 	close_all();
 	// debugf("executed\n");
 	if (child >= 0) {
-		r = wait(child);
+		if (background) {
+			r = 0;
+			jobs[++jobscount].env_id = child;
+			strcpy(jobs[jobscount].cmd, cmd);
+			jobs[jobscount].status = 1;
+		} else {
+			r = wait(child);
+			debugf("hhh\n");
+			for (int i = 1; i <= jobscount; i++) {
+				if (jobs[i].env_id == child) {
+					jobs[i].status = 0;
+				}
+			}
+		}
 	} else {
 		debugf("spawn %s: %d\n", argv[0], child);
 	}
