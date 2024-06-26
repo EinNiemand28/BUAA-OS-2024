@@ -560,8 +560,7 @@ void runcmd(char *s) {
 	close_all();
 	// debugf("executed\n");
 	if (child >= 0) {
-		r = ipc_recv(&who, 0, 0);
-		wait(child);
+		r = wait(child);
 	} else {
 		debugf("spawn %s: %d\n", argv[0], child);
 	}
