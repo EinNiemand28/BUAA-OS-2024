@@ -150,7 +150,7 @@ int parsecmd(char **argv, int *rightpipe) {
 			if (backquote) {
 				if ((r = pipe(p)) < 0) {
 					debugf("failed to allocate a pipe: %d\n", r);
-					exit(0);
+					exit();
 				}
 				if ((*rightpipe = fork()) == 0) {
 					dup(p[1], 1);
@@ -219,14 +219,14 @@ int parsecmd(char **argv, int *rightpipe) {
 		case 'w':
 			if (argc >= MAXARGS) {
 				debugf("too many arguments\n");
-				exit(0);
+				exit();
 			}
 			argv[argc++] = t;
 			break;
 		case '<':
 			if (gettoken(0, &t) != 'w') {
 				debugf("syntax error: < not followed by word\n");
-				exit(0);
+				exit();
 			}
 			// Open 't' for reading, dup it onto fd 0, and then close the original fd.
 			// If the 'open' function encounters an error,
@@ -237,7 +237,7 @@ int parsecmd(char **argv, int *rightpipe) {
 			//user_panic("< redirection not implemented");
 			if ((r = open(t, O_RDONLY)) < 0) {
 				debugf("failed to open \'%s\': %d\n", t, r);
-				exit(0);
+				exit();
 			}
 			fd = r;
 			dup(fd, 0);
@@ -250,13 +250,13 @@ int parsecmd(char **argv, int *rightpipe) {
 				mode |= O_APPEND;
 				if ((cc = gettoken(0, &t)) != 'w') {
 					debugf("syntax error: > not followed by word\n");
-					exit(0);
+					exit();
 				}
 			} else if (cc == 'w') {
 				mode |= O_TRUNC;
 			} else {
 				debugf("syntax error: > not followed by word\n");
-				exit(0);
+				exit();
 			}
 			//debugf("%d\n", mode & O_APPEND);
 
@@ -270,7 +270,7 @@ int parsecmd(char **argv, int *rightpipe) {
 			//user_panic("> redirection not implemented");
 			if ((r = open(t, mode)) < 0) {
 				debugf("failed to open \'%s\': %d\n", t, r);
-				exit(0);
+				exit();
 			}
 			fd = r;
 			dup(fd, 1);
@@ -297,7 +297,7 @@ int parsecmd(char **argv, int *rightpipe) {
 			//user_panic("| not implemented");
 			if ((r = pipe(p)) < 0) {
 				debugf("failed to allocate a pipe: %d\n", r);
-				exit(0);
+				exit();
 			}
 			redirect = 1;
 			if ((*rightpipe = fork()) == 0) {
@@ -423,7 +423,7 @@ void readline(char *buf, u_int n) {
 			if (r < 0) {
 				debugf("read error: %d\n", r);
 			}
-			exit(0);
+			exit();
 		}
 		if (tmp == '\b' || tmp == 0x7f) {
 		//  backspace         delete
@@ -560,7 +560,8 @@ void runcmd(char *s) {
 	close_all();
 	// debugf("executed\n");
 	if (child >= 0) {
-		r = ipc_recv(&who, 0, 0);
+		wait(child);
+		// r = ipc_recv(&who, 0, 0);
 	} else {
 		debugf("spawn %s: %d\n", argv[0], child);
 	}
@@ -569,14 +570,14 @@ void runcmd(char *s) {
 		wait(rightpipe);
 	}
 	// debugf("exit\n");
-	exit(r);
+	exit();
 }
 
 char buf[1024];
 
 void usage(void) {
 	printf("usage: sh [-ix] [script-file]\n");
-	exit(0);
+	exit();
 }
 
 int main(int argc, char **argv) {
@@ -634,7 +635,7 @@ int main(int argc, char **argv) {
 		}
 		if (r == 0) {
 			runcmd(buf);
-			exit(0);
+			exit();
 		} else {
 			wait(r);
 		}

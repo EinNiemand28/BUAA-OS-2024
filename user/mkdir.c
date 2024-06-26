@@ -3,7 +3,7 @@
 int pmod;
 void usage(void) {
     printf("usage: mkdir [-p] [dir..]\n");
-    exit(0);
+    exit();
 }
 int main(int argc, char **argv) {
     ARGBEGIN {

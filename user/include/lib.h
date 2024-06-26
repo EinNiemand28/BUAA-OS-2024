@@ -14,7 +14,7 @@
 #define pages ((const volatile struct Page *)UPAGES)
 
 // libos
-void exit(int __status) __attribute__((noreturn));
+void exit(void) __attribute__((noreturn));
 
 extern const volatile struct Env *env;
 
