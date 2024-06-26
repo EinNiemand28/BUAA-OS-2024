@@ -590,6 +590,14 @@ int runcmd(char *s) {
 
 	if (!strcmp(argv[0], "fg")) {
 		int jobid = atoi(argv[1]);
+		if (jobid <= jobscount) {
+			debugf("fg: job (%d) do not exist\n", jobid);
+			return 0;
+		}
+		if (jobs[jobid].status == 0) {
+			debugf("fg: (0x%08x) not running\n", jobid);
+			return 0;
+		}
 		check2(jobs[jobid].env_id);
 		return 0;
 	}
@@ -700,11 +708,15 @@ int main(int argc, char **argv) {
 				for (int i = 1; i <= jobscount; i++) {
 					debugf("[%d] %-10s 0x%08x %s\n", i, jobs[i].status ? "Running" : "Done", jobs[i].env_id, jobs[i].cmd);
 				}
-			} else if (ret < 30) {
+			} else if (ret <= jobscount) {
 				if (jobs[ret].status) {
 					syscall_set_env_status(jobs[ret].env_id, ENV_NOT_RUNNABLE);
 					jobs[ret].status = 0;
+				} else {
+					debugf("fg: (0x%08x) not running\n", ret);
 				}
+			} else {
+				debugf("fg: job (%d) do not exist\n", ret);
 			}
 		}
 	}

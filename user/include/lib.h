@@ -77,6 +77,7 @@ u_int ipc_recv(u_int *whom, void *dstva, u_int *perm);
 int wait(u_int envid);
 int check(u_int envid);
 void check2(u_int envid);
+int check3(u_int envid);
 
 // console.c
 int opencons(void);
