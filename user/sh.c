@@ -150,7 +150,7 @@ int parsecmd(char **argv, int *rightpipe) {
 			if (backquote) {
 				if ((r = pipe(p)) < 0) {
 					debugf("failed to allocate a pipe: %d\n", r);
-					exit();
+					exit(0);
 				}
 				if ((*rightpipe = fork()) == 0) {
 					dup(p[1], 1);
@@ -219,14 +219,14 @@ int parsecmd(char **argv, int *rightpipe) {
 		case 'w':
 			if (argc >= MAXARGS) {
 				debugf("too many arguments\n");
-				exit();
+				exit(0);
 			}
 			argv[argc++] = t;
 			break;
 		case '<':
 			if (gettoken(0, &t) != 'w') {
 				debugf("syntax error: < not followed by word\n");
-				exit();
+				exit(0);
 			}
 			// Open 't' for reading, dup it onto fd 0, and then close the original fd.
 			// If the 'open' function encounters an error,
@@ -237,7 +237,7 @@ int parsecmd(char **argv, int *rightpipe) {
 			//user_panic("< redirection not implemented");
 			if ((r = open(t, O_RDONLY)) < 0) {
 				debugf("failed to open \'%s\': %d\n", t, r);
-				exit();
+				exit(0);
 			}
 			fd = r;
 			dup(fd, 0);
@@ -250,13 +250,13 @@ int parsecmd(char **argv, int *rightpipe) {
 				mode |= O_APPEND;
 				if ((cc = gettoken(0, &t)) != 'w') {
 					debugf("syntax error: > not followed by word\n");
-					exit();
+					exit(0);
 				}
 			} else if (cc == 'w') {
 				mode |= O_TRUNC;
 			} else {
 				debugf("syntax error: > not followed by word\n");
-				exit();
+				exit(0);
 			}
 			//debugf("%d\n", mode & O_APPEND);
 
@@ -270,7 +270,7 @@ int parsecmd(char **argv, int *rightpipe) {
 			//user_panic("> redirection not implemented");
 			if ((r = open(t, mode)) < 0) {
 				debugf("failed to open \'%s\': %d\n", t, r);
-				exit();
+				exit(0);
 			}
 			fd = r;
 			dup(fd, 1);
@@ -297,7 +297,7 @@ int parsecmd(char **argv, int *rightpipe) {
 			//user_panic("| not implemented");
 			if ((r = pipe(p)) < 0) {
 				debugf("failed to allocate a pipe: %d\n", r);
-				exit();
+				exit(0);
 			}
 			redirect = 1;
 			if ((*rightpipe = fork()) == 0) {
@@ -423,7 +423,7 @@ void readline(char *buf, u_int n) {
 			if (r < 0) {
 				debugf("read error: %d\n", r);
 			}
-			exit();
+			exit(0);
 		}
 		if (tmp == '\b' || tmp == 0x7f) {
 		//  backspace         delete
@@ -570,14 +570,14 @@ void runcmd(char *s) {
 		wait(rightpipe);
 	}
 	// debugf("exit\n");
-	exit();
+	exit(0);
 }
 
 char buf[1024];
 
 void usage(void) {
 	printf("usage: sh [-ix] [script-file]\n");
-	exit();
+	exit(0);
 }
 
 int main(int argc, char **argv) {
@@ -635,7 +635,7 @@ int main(int argc, char **argv) {
 		}
 		if (r == 0) {
 			runcmd(buf);
-			exit();
+			exit(0);
 		} else {
 			wait(r);
 		}
